@@ -1,0 +1,330 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Plus, Search, Package, Edit, Trash2 } from "lucide-react"
+import type { Equipment } from "@/lib/types"
+
+const categories = ["Lighting", "Effects", "Display", "Rigging", "Control", "Audio", "Other"]
+
+export default function InventoryPage() {
+  const supabase = createClient()
+  const [equipment, setEquipment] = useState<Equipment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [categoryFilter, setCategoryFilter] = useState<string>("all")
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<Equipment | null>(null)
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    category: "",
+    total_quantity: "",
+    available_quantity: "",
+  })
+
+  useEffect(() => {
+    fetchEquipment()
+  }, [categoryFilter])
+
+  async function fetchEquipment() {
+    setLoading(true)
+    let query = supabase.from("equipment").select("*").order("name")
+
+    if (categoryFilter !== "all") {
+      query = query.eq("category", categoryFilter)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error("Error fetching equipment:", error)
+    } else {
+      setEquipment(data || [])
+    }
+    setLoading(false)
+  }
+
+  const filteredEquipment = equipment.filter((item) =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    
+    const payload = {
+      name: formData.name,
+      description: formData.description || null,
+      category: formData.category,
+      total_quantity: parseInt(formData.total_quantity),
+      available_quantity: parseInt(formData.available_quantity),
+    }
+
+    if (editingItem) {
+      const { error } = await supabase
+        .from("equipment")
+        .update(payload)
+        .eq("id", editingItem.id)
+
+      if (!error) {
+        fetchEquipment()
+        closeDialog()
+      }
+    } else {
+      const { error } = await supabase.from("equipment").insert(payload)
+
+      if (!error) {
+        fetchEquipment()
+        closeDialog()
+      }
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Yakin ingin menghapus item ini?")) return
+
+    const { error } = await supabase.from("equipment").delete().eq("id", id)
+    if (!error) {
+      fetchEquipment()
+    }
+  }
+
+  function openEditDialog(item: Equipment) {
+    setEditingItem(item)
+    setFormData({
+      name: item.name,
+      description: item.description || "",
+      category: item.category || "",
+      total_quantity: item.total_quantity.toString(),
+      available_quantity: item.available_quantity.toString(),
+    })
+    setIsDialogOpen(true)
+  }
+
+  function closeDialog() {
+    setIsDialogOpen(false)
+    setEditingItem(null)
+    setFormData({
+      name: "",
+      description: "",
+      category: "",
+      total_quantity: "",
+      available_quantity: "",
+    })
+  }
+
+  const getAvailabilityColor = (available: number, total: number) => {
+    const percentage = (available / total) * 100
+    if (percentage >= 70) return "bg-green-500"
+    if (percentage >= 30) return "bg-amber-500"
+    return "bg-red-500"
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Inventory</h1>
+          <p className="text-muted-foreground">Kelola equipment dan alat</p>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-primary hover:bg-primary/90" onClick={() => closeDialog()}>
+              <Plus className="mr-2 h-4 w-4" />
+              Tambah Item
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingItem ? "Edit Item" : "Tambah Item Baru"}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nama Item *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Deskripsi</Label>
+                <Input
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category">Kategori *</Label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value) => setFormData({ ...formData, category: value })}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="total_quantity">Total Unit *</Label>
+                  <Input
+                    id="total_quantity"
+                    type="number"
+                    value={formData.total_quantity}
+                    onChange={(e) => setFormData({ ...formData, total_quantity: e.target.value })}
+                    required
+                    min={0}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="available_quantity">Tersedia *</Label>
+                  <Input
+                    id="available_quantity"
+                    type="number"
+                    value={formData.available_quantity}
+                    onChange={(e) => setFormData({ ...formData, available_quantity: e.target.value })}
+                    required
+                    min={0}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={closeDialog}>
+                  Batal
+                </Button>
+                <Button type="submit" className="bg-primary">
+                  {editingItem ? "Update" : "Simpan"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Cari equipment..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter Kategori" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Kategori</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : filteredEquipment.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Package className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium">Belum ada equipment</h3>
+              <p className="text-muted-foreground mt-1">Mulai dengan menambahkan item baru</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredEquipment.map((item) => (
+                <Card key={item.id} className="relative overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Package className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">{item.name}</h3>
+                          <Badge variant="outline" className="text-xs">
+                            {item.category}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => openEditDialog(item)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => handleDelete(item.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Ketersediaan</span>
+                        <span className="font-medium">
+                          {item.available_quantity} / {item.total_quantity} unit
+                        </span>
+                      </div>
+                      <Progress
+                        value={(item.available_quantity / item.total_quantity) * 100}
+                        className="h-2"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
