@@ -117,6 +117,19 @@ pnpm dev
 open http://localhost:3000
 ```
 
+## 🧩 Monorepo Usage
+
+### Root commands
+- `npm install` — install dependencies for the entire workspace
+- `npm run dev` — start the frontend workspace
+- `npm run dev:backend` — start the backend service
+- `npm run build` — build the frontend workspace
+- `npm run lint` — run frontend ESLint from the root workspace
+
+### Workspace folders
+- `frontend/` — Next.js app, UI, and frontend assets
+- `backend/` — Express backend server, routes, controllers, and config
+
 **Detailed setup guide:** [SETUP_GUIDE.md](./SETUP_GUIDE.md)
 
 ## 📁 Project Structure

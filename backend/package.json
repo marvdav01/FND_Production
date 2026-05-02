@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "nodemon src/index.js",
-    "start": "node src/index.js",
-    "seed": "node seed.js"
+    "dev": "nodemon app.js",
+    "start": "node app.js",
+    "seed": "node ../database/seed.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
