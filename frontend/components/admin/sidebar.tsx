@@ -18,6 +18,10 @@ import {
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
+import { useState, useEffect } from "react"
+import { useAuth } from "@/hooks/useAuth"
+import { useRouter } from "next/navigation"
+
 interface SidebarProps {
   user?: {
     name: string
@@ -29,7 +33,7 @@ interface SidebarProps {
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
   { icon: Calendar, label: "Event", href: "/admin/events" },
-  { icon: FileText, label: "Request", href: "/admin/requests" },
+  { icon: FileText, label: "Request", href: "/admin/request" },
   { icon: CalendarDays, label: "Calendar", href: "/admin/calendar" },
   { icon: Package, label: "Inventory", href: "/admin/inventory" },
   { icon: Users, label: "Crew", href: "/admin/crew" },
@@ -38,8 +42,14 @@ const menuItems = [
   { icon: Settings, label: "Settings", href: "/admin/settings" },
 ]
 
-export function AdminSidebar({ user }: SidebarProps) {
+export function AdminSidebar({ user: initialUser }: SidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
+  const { user, logout } = useAuth()
+
+  const handleLogout = async () => {
+    await logout()
+  }
 
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col bg-sidebar text-sidebar-foreground">
@@ -94,7 +104,10 @@ export function AdminSidebar({ user }: SidebarProps) {
           </div>
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </div>
-        <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent transition-colors">
+        <button 
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent transition-colors"
+        >
           <LogOut className="h-4 w-4" />
           Log out
         </button>

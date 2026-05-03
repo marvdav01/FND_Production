@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { fetchAPI } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,6 +18,7 @@ import {
 import { ArrowLeft, Save, Calendar, MapPin, Clock, User } from "lucide-react"
 import Link from "next/link"
 import type { Profile, Equipment } from "@/lib/types"
+import { toast } from "sonner"
 
 const eventTypes = [
   "Wedding",
@@ -34,7 +35,6 @@ const eventTypes = [
 
 export default function NewEventPage() {
   const router = useRouter()
-  const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [clients, setClients] = useState<Profile[]>([])
   const [equipment, setEquipment] = useState<Equipment[]>([])
@@ -60,21 +60,29 @@ export default function NewEventPage() {
   }, [])
 
   async function fetchClients() {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("role", "client")
-      .order("full_name")
-    setClients(data || [])
+    try {
+      const res = await fetchAPI('/auth/users?role=client')
+      if (res.success) {
+        setClients(res.data)
+      }
+    } catch (err) {
+      console.error("Error fetching clients:", err)
+    }
   }
 
   async function fetchEquipment() {
-    const { data } = await supabase
-      .from("equipment")
-      .select("*")
-      .gt("available_quantity", 0)
-      .order("name")
-    setEquipment(data || [])
+    try {
+      const res = await fetchAPI('/equipment')
+      if (res.success) {
+        const mapped = res.data.map((eq: any) => ({
+          ...eq,
+          available_quantity: eq.available_stock || 0
+        }))
+        setEquipment(mapped.filter((eq: any) => eq.available_quantity > 0))
+      }
+    } catch (err) {
+      console.error("Error fetching equipment:", err)
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -82,46 +90,33 @@ export default function NewEventPage() {
     setLoading(true)
 
     try {
-      const { data: eventData, error: eventError } = await supabase
-        .from("events")
-        .insert({
-          name: formData.name,
-          event_type: formData.event_type,
-          event_date: formData.event_date,
-          start_time: formData.start_time || null,
-          end_time: formData.end_time || null,
-          location: formData.location,
-          venue_name: formData.venue_name || null,
-          requirements: formData.requirements || null,
-          client_id: formData.client_id || null,
-          total_price: parseFloat(formData.total_price) || 0,
-          notes: formData.notes || null,
-          status: "pending",
-        })
-        .select()
-        .single()
-
-      if (eventError) throw eventError
-
-      // Add selected equipment
-      if (selectedEquipment.length > 0 && eventData) {
-        const equipmentInserts = selectedEquipment.map((eq) => ({
-          event_id: eventData.id,
-          equipment_id: eq.id,
-          quantity: eq.quantity,
-        }))
-
-        const { error: eqError } = await supabase
-          .from("event_equipment")
-          .insert(equipmentInserts)
-
-        if (eqError) console.error("Error adding equipment:", eqError)
+      const payload = {
+        name: formData.name,
+        type: formData.event_type,
+        eventDate: formData.event_date,
+        location: formData.location,
+        notes: formData.notes,
+        totalAmount: parseFloat(formData.total_price) || 0,
+        dpAmount: 0,
+        clientId: formData.client_id || null,
+        equipment: selectedEquipment.map(eq => ({ equipmentId: eq.id, quantity: eq.quantity })),
+        crew: []
       }
 
-      router.push("/admin/events")
-    } catch (error) {
+      const res = await fetchAPI('/events', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+
+      if (res.success) {
+        toast.success("Event berhasil dibuat!")
+        router.push("/admin/events")
+      } else {
+        toast.error(res.error || "Gagal membuat event")
+      }
+    } catch (error: any) {
       console.error("Error creating event:", error)
-      alert("Gagal membuat event")
+      toast.error(error.message || "Terjadi kesalahan sistem")
     } finally {
       setLoading(false)
     }

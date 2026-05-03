@@ -1,11 +1,14 @@
-import { pool } from './src/db.js'
+import { pool } from '../backend/config/db.js'
 import fs from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 async function run() {
   try {
-    const sql = fs.readFileSync(path.resolve('./schema.sql'), 'utf8')
-    const statements = sql.split(/;\s*\n/).filter(Boolean)
+    const sql = fs.readFileSync(path.resolve(__dirname, './schema.sql'), 'utf8')
+    const statements = sql.split(/;[\r\n]+/).filter(st => st.trim())
     for (const statement of statements) {
       await pool.query(statement)
     }

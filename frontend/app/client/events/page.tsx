@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { fetchAPI } from "@/lib/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -21,7 +21,6 @@ const statusColors: Record<EventStatus, string> = {
 const filters = ["Semua", "Survey", "Deal", "Running", "Selesai"]
 
 export default function ClientEventsPage() {
-  const supabase = createClient()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState("Semua")
@@ -32,23 +31,26 @@ export default function ClientEventsPage() {
 
   async function fetchEvents() {
     setLoading(true)
-    const { data: userData } = await supabase.auth.getUser()
-
-    if (userData.user) {
-      let query = supabase
-        .from("events")
-        .select("*")
-        .eq("client_id", userData.user.id)
-        .order("event_date", { ascending: false })
-
-      if (activeFilter !== "Semua") {
-        query = query.eq("status", activeFilter.toLowerCase())
+    try {
+      const endpoint = activeFilter !== "Semua" 
+        ? `/events?status=${activeFilter.toLowerCase()}` 
+        : '/events'
+      const res = await fetchAPI(endpoint)
+      if (res.success) {
+        const mappedData = res.data.map((e: any) => ({
+          ...e,
+          event_type: e.type,
+          total_price: e.total_amount
+        }))
+        setEvents(mappedData)
+      } else {
+        console.error("Error fetching events:", res.error)
       }
-
-      const { data } = await query
-      setEvents(data || [])
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const formatDate = (date: string) => {

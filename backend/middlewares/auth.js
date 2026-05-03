@@ -6,12 +6,18 @@ dotenv.config()
 const secret = process.env.JWT_SECRET || 'supersecretkey'
 
 export function authenticate(req, res, next) {
+  let token = null
   const header = req.headers.authorization
-  if (!header || !header.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, error: 'Unauthorized' })
+  
+  if (header && header.startsWith('Bearer ')) {
+    token = header.split(' ')[1]
+  } else if (req.query.token) {
+    token = req.query.token
   }
 
-  const token = header.split(' ')[1]
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' })
+  }
   try {
     const payload = jwt.verify(token, secret)
     req.user = payload

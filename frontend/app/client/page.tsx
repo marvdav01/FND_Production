@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { fetchAPI } from "@/lib/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -19,7 +19,6 @@ const statusColors: Record<EventStatus, string> = {
 }
 
 export default function ClientHomePage() {
-  const supabase = createClient()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [userName, setUserName] = useState("Edisyah")
@@ -30,30 +29,26 @@ export default function ClientHomePage() {
 
   async function fetchEvents() {
     setLoading(true)
-    const { data: userData } = await supabase.auth.getUser()
-    
-    if (userData.user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", userData.user.id)
-        .single()
-      
-      if (profile) {
-        setUserName(profile.full_name.split(" ")[0])
+    try {
+      const profileRes = await fetchAPI('/auth/profile')
+      if (profileRes.success && profileRes.data) {
+        setUserName(profileRes.data.name?.split(" ")[0] || 'Client')
       }
 
-      const { data: eventsData } = await supabase
-        .from("events")
-        .select("*")
-        .eq("client_id", userData.user.id)
-        .in("status", ["pending", "survey", "deal", "running"])
-        .order("event_date", { ascending: true })
-        .limit(5)
-
-      setEvents(eventsData || [])
+      const eventsRes = await fetchAPI('/events')
+      if (eventsRes.success) {
+        const activeEvents = eventsRes.data
+          .filter((e: any) => ["pending", "survey", "deal", "running"].includes(e.status))
+          .sort((a: any, b: any) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
+          .slice(0, 5)
+        
+        setEvents(activeEvents)
+      }
+    } catch (err) {
+      console.error("Error fetching client dashboard data:", err)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const formatDate = (date: string) => {

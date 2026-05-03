@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { fetchAPI } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,7 +35,6 @@ const positions = [
 ]
 
 export default function CrewPage() {
-  const supabase = createClient()
   const [crew, setCrew] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
@@ -55,24 +54,26 @@ export default function CrewPage() {
 
   async function fetchCrew() {
     setLoading(true)
-    let query = supabase
-      .from("profiles")
-      .select("*")
-      .eq("role", "crew")
-      .order("full_name")
-
-    if (availabilityFilter !== "all") {
-      query = query.eq("availability", availabilityFilter)
-    }
-
-    const { data, error } = await query
-
-    if (error) {
+    try {
+      const endpoint = availabilityFilter !== "all" ? `/crew?status=${availabilityFilter}` : '/crew'
+      const res = await fetchAPI(endpoint)
+      
+      if (res.success) {
+        const mappedData = res.data.map((c: any) => ({
+          ...c,
+          full_name: c.name,
+          position: c.role,
+          availability: c.status || 'tersedia'
+        }))
+        setCrew(mappedData)
+      } else {
+        console.error("Error fetching crew:", res.error)
+      }
+    } catch (error) {
       console.error("Error fetching crew:", error)
-    } else {
-      setCrew(data || [])
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const filteredCrew = crew.filter(
@@ -85,31 +86,41 @@ export default function CrewPage() {
     e.preventDefault()
 
     if (editingItem) {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          full_name: formData.full_name,
+      try {
+        const payload = {
+          name: formData.full_name,
           phone: formData.phone || null,
-          position: formData.position,
-          availability: formData.availability,
+          role: formData.position,
+          status: formData.availability,
+        }
+        
+        const res = await fetchAPI(`/crew/${editingItem.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload)
         })
-        .eq("id", editingItem.id)
 
-      if (!error) {
-        fetchCrew()
-        closeDialog()
+        if (res.success) {
+          fetchCrew()
+          closeDialog()
+        }
+      } catch (error) {
+        console.error("Error updating crew:", error)
       }
     }
   }
 
   async function updateAvailability(id: string, availability: CrewAvailability) {
-    const { error } = await supabase
-      .from("profiles")
-      .update({ availability })
-      .eq("id", id)
+    try {
+      const res = await fetchAPI(`/crew/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: availability })
+      })
 
-    if (!error) {
-      fetchCrew()
+      if (res.success) {
+        fetchCrew()
+      }
+    } catch (error) {
+      console.error("Error updating availability:", error)
     }
   }
 

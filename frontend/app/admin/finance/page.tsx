@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { fetchAPI } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,12 +40,15 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import type { Payment, PaymentStatus } from "@/lib/types"
+import { Skeleton } from "@/components/ui/skeleton"
+import { AlertCircle } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
-interface PaymentWithEvent extends Payment {
+interface PaymentWithEvent extends Omit<Payment, 'event'> {
   event: {
     id: string
     name: string
-    event_date: string
+    event_date?: string
     client: {
       full_name: string
     } | null
@@ -53,9 +56,9 @@ interface PaymentWithEvent extends Payment {
 }
 
 export default function FinancePage() {
-  const supabase = createClient()
   const [payments, setPayments] = useState<PaymentWithEvent[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedPayment, setSelectedPayment] = useState<PaymentWithEvent | null>(null)
@@ -67,45 +70,58 @@ export default function FinancePage() {
 
   async function fetchPayments() {
     setLoading(true)
-    let query = supabase
-      .from("payments")
-      .select(`
-        *,
-        event:events(
-          id,
-          name,
-          event_date,
-          client:profiles!events_client_id_fkey(full_name)
-        )
-      `)
-      .order("created_at", { ascending: false })
+    setError(null)
+    try {
+      // Map frontend status filter to backend enum ('paid' | 'unpaid')
+      let endpoint = '/payments'
+      if (statusFilter === 'lunas') {
+        endpoint += '?status=paid'
+      } else if (statusFilter === 'belum_lunas') {
+        endpoint += '?status=unpaid'
+      }
 
-    if (statusFilter !== "all") {
-      query = query.eq("status", statusFilter)
+      const res = await fetchAPI(endpoint)
+      if (res.success) {
+        const mappedData = res.data.map((p: any) => ({
+          ...p,
+          status: p.status === 'paid' ? 'lunas' : 'belum_lunas',
+          event: {
+            id: p.event_id,
+            name: p.event_name,
+            client: { full_name: p.client_name }
+          }
+        }))
+        setPayments(mappedData)
+      } else {
+        setError(res.error || "Gagal memuat data pembayaran")
+      }
+    } catch (err: any) {
+      if (err.message.includes("403") || err.message.includes("Forbidden")) {
+        setError("Anda tidak memiliki akses ke data keuangan. Pastikan Anda masuk sebagai Admin.")
+      } else {
+        setError(err.message || "Terjadi kesalahan sistem")
+      }
+    } finally {
+      setLoading(false)
     }
-
-    const { data, error } = await query
-
-    if (error) {
-      console.error("Error fetching payments:", error)
-    } else {
-      setPayments(data || [])
-    }
-    setLoading(false)
   }
 
   async function updatePaymentStatus(paymentId: string, status: PaymentStatus) {
-    const { error } = await supabase
-      .from("payments")
-      .update({
-        status,
-        payment_date: status === "lunas" ? new Date().toISOString() : null,
+    try {
+      const backendStatus = status === "lunas" ? "paid" : "unpaid"
+      const res = await fetchAPI(`/payments/${paymentId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: backendStatus })
       })
-      .eq("id", paymentId)
 
-    if (!error) {
-      fetchPayments()
-      setIsDialogOpen(false)
+      if (res.success) {
+        fetchPayments()
+        setIsDialogOpen(false)
+      } else {
+        console.error("Failed to update payment status:", res.error)
+      }
+    } catch (err) {
+      console.error("Error updating payment status:", err)
     }
   }
 
@@ -149,46 +165,64 @@ export default function FinancePage() {
         </div>
       </div>
 
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-xl font-bold">{formatCurrency(totalRevenue)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pending Payment</p>
-                <p className="text-xl font-bold">{formatCurrency(pendingPayments)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Transaksi</p>
-                <p className="text-xl font-bold">{payments.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {loading ? (
+          <>
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </>
+        ) : (
+          <>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
+                    <DollarSign className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Revenue</p>
+                    <p className="text-xl font-bold">{formatCurrency(totalRevenue)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Pending Payment</p>
+                    <p className="text-xl font-bold">{formatCurrency(pendingPayments)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Transaksi</p>
+                    <p className="text-xl font-bold">{payments.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       <Card>
@@ -217,8 +251,12 @@ export default function FinancePage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <div className="space-y-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
             </div>
           ) : filteredPayments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { fetchAPI } from "@/lib/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -20,7 +20,6 @@ interface CrewEvent extends Event {
 }
 
 export default function CrewHomePage() {
-  const supabase = createClient()
   const [events, setEvents] = useState<CrewEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState("Hari Ini")
@@ -31,17 +30,10 @@ export default function CrewHomePage() {
 
   async function fetchAssignments() {
     setLoading(true)
-    const { data: userData } = await supabase.auth.getUser()
-
-    if (userData.user) {
-      // Get crew assignments
-      const { data: assignments } = await supabase
-        .from("event_crew")
-        .select("event_id")
-        .eq("crew_id", userData.user.id)
-
-      if (assignments && assignments.length > 0) {
-        const eventIds = assignments.map((a) => a.event_id)
+    try {
+      const res = await fetchAPI('/events/assigned')
+      if (res.success) {
+        let eventsData = res.data
 
         let dateFilter = new Date()
         let endDate = new Date()
@@ -56,23 +48,22 @@ export default function CrewHomePage() {
           endDate.setDate(endDate.getDate() + 7)
         }
 
-        const { data: eventsData } = await supabase
-          .from("events")
-          .select(`
-            *,
-            schedules:event_schedules(schedule_time, activity, description)
-          `)
-          .in("id", eventIds)
-          .gte("event_date", dateFilter.toISOString().split("T")[0])
-          .lte("event_date", endDate.toISOString().split("T")[0])
-          .order("event_date", { ascending: true })
+        const dateFilterStr = dateFilter.toISOString().split("T")[0]
+        const endDateStr = endDate.toISOString().split("T")[0]
 
-        setEvents(eventsData || [])
+        eventsData = eventsData.filter((e: any) => 
+          e.event_date >= dateFilterStr && e.event_date <= endDateStr
+        )
+
+        setEvents(eventsData)
       } else {
-        setEvents([])
+        console.error("Error fetching assignments:", res.error)
       }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const formatDate = (date: string) => {

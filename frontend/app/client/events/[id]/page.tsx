@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, use } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { fetchAPI } from "@/lib/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -36,7 +36,6 @@ const statusOrder: EventStatus[] = ["pending", "survey", "deal", "running", "sel
 
 export default function ClientEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const supabase = createClient()
   const [event, setEvent] = useState<Event | null>(null)
   const [equipment, setEquipment] = useState<any[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
@@ -49,41 +48,30 @@ export default function ClientEventDetailPage({ params }: { params: Promise<{ id
 
   async function fetchEventDetails() {
     setLoading(true)
-
-    const { data: eventData } = await supabase
-      .from("events")
-      .select("*")
-      .eq("id", id)
-      .single()
-
-    if (eventData) {
-      setEvent(eventData)
+    try {
+      const res = await fetchAPI(`/events/${id}`)
+      if (res.success) {
+        const e = res.data
+        setEvent({
+          ...e,
+          event_type: e.type,
+          total_price: e.total_amount
+        } as any)
+        
+        setEquipment(e.equipment?.map((eq: any) => ({
+          id: eq.id,
+          quantity: eq.quantity,
+          equipment: { name: eq.name }
+        })) || [])
+        
+        setPayments(e.payments || [])
+        setStatusHistory([]) // status history is not implemented in local backend yet
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-
-    const { data: eqData } = await supabase
-      .from("event_equipment")
-      .select("*, equipment(*)")
-      .eq("event_id", id)
-
-    setEquipment(eqData || [])
-
-    const { data: paymentData } = await supabase
-      .from("payments")
-      .select("*")
-      .eq("event_id", id)
-      .order("created_at")
-
-    setPayments(paymentData || [])
-
-    const { data: historyData } = await supabase
-      .from("event_status_history")
-      .select("*")
-      .eq("event_id", id)
-      .order("changed_at")
-
-    setStatusHistory(historyData || [])
-
-    setLoading(false)
   }
 
   const formatDate = (date: string) => {

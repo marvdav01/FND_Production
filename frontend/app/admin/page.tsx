@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+
 import { AdminHeader } from "@/components/admin/header"
 import { StatsCard } from "@/components/admin/stats-card"
 import { EventsChart } from "@/components/admin/events-chart"
@@ -10,136 +10,120 @@ import { CrewStatus } from "@/components/admin/crew-status"
 import { Calendar, DollarSign, Package, Users } from "lucide-react"
 import { EventStatus } from "@/lib/types"
 
+import { fetchAPI } from "@/lib/api"
+
 async function getDashboardData() {
-  const supabase = await createClient()
+  try {
+    // Fetch data from Node.js backend
+    const [eventsRes, equipmentRes, crewRes] = await Promise.all([
+      fetchAPI('/events'),
+      fetchAPI('/equipment'),
+      fetchAPI('/crew')
+    ]);
 
-  // Get total events count
-  const { count: totalEvents } = await supabase
-    .from("events")
-    .select("*", { count: "exact", head: true })
+    const events = eventsRes.data || [];
+    const equipmentData = equipmentRes.data || [];
+    const crewData = crewRes.data || [];
 
-  // Get today's events
-  const today = new Date().toISOString().split("T")[0]
-  const { count: eventsToday } = await supabase
-    .from("events")
-    .select("*", { count: "exact", head: true })
-    .eq("event_date", today)
+    // Stats calculations
+    const totalEvents = events.length;
+    
+    const today = new Date().toISOString().split("T")[0];
+    const eventsToday = events.filter((e: any) => e.event_date && e.event_date.startsWith(today)).length;
 
-  // Get total revenue (from completed events)
-  const { data: revenueData } = await supabase
-    .from("events")
-    .select("total_price")
-    .in("status", ["deal", "running", "selesai"])
+    const totalRevenue = events
+      .filter((e: any) => ["deal", "running", "selesai"].includes(e.status))
+      .reduce((sum: number, e: any) => sum + (e.total_amount || 0), 0);
 
-  const totalRevenue = revenueData?.reduce((sum, e) => sum + (e.total_price || 0), 0) || 0
+    const totalEquipment = equipmentData.reduce((sum: number, e: any) => sum + (e.total_stock || 0), 0);
+    const availableEquipment = equipmentData.reduce((sum: number, e: any) => sum + (e.available_stock || 0), 0);
 
-  // Get equipment stats
-  const { data: equipmentData } = await supabase
-    .from("equipment")
-    .select("total_quantity, available_quantity")
+    const availableCrew = crewData.filter((c: any) => c.status === "available").length;
+    const totalCrew = crewData.length;
 
-  const totalEquipment = equipmentData?.reduce((sum, e) => sum + e.total_quantity, 0) || 0
-  const availableEquipment = equipmentData?.reduce((sum, e) => sum + e.available_quantity, 0) || 0
+    const recentEvents = [...events]
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+      .slice(0, 5)
+      .map((e: any) => ({
+        ...e,
+        total_price: e.total_amount,
+        client: { full_name: e.client_name }
+      }));
 
-  // Get crew stats
-  const { data: crewData, count: totalCrew } = await supabase
-    .from("profiles")
-    .select("*", { count: "exact" })
-    .eq("role", "crew")
+    const upcomingEvents = events
+      .filter((e: any) => e.event_date && e.event_date >= today && ["pending", "survey", "deal", "running"].includes(e.status))
+      .sort((a: any, b: any) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
+      .slice(0, 5)
+      .map((e: any) => ({
+        ...e,
+        total_price: e.total_amount,
+        client: { full_name: e.client_name }
+      }));
 
-  const availableCrew = crewData?.filter((c) => c.availability === "tersedia").length || 0
+    const statusCounts: Record<EventStatus, number> = {
+      pending: 0, survey: 0, deal: 0, running: 0, selesai: 0, cancel: 0,
+    };
+    events.forEach((e: any) => {
+      if (statusCounts[e.status as EventStatus] !== undefined) {
+        statusCounts[e.status as EventStatus]++;
+      }
+    });
 
-  // Get recent events with client info
-  const { data: recentEvents } = await supabase
-    .from("events")
-    .select(`
-      *,
-      client:profiles!events_client_id_fkey(*)
-    `)
-    .order("created_at", { ascending: false })
-    .limit(5)
+    const eventsByStatus = Object.entries(statusCounts).map(([status, count]) => ({
+      status: status as EventStatus,
+      count,
+      percentage: totalEvents > 0 ? Math.round((count / totalEvents) * 100) : 0,
+    }));
 
-  // Get upcoming events
-  const { data: upcomingEvents } = await supabase
-    .from("events")
-    .select("*")
-    .gte("event_date", today)
-    .in("status", ["pending", "survey", "deal", "running"])
-    .order("event_date", { ascending: true })
-    .limit(5)
+    const currentYear = new Date().getFullYear();
+    const monthlyEvents = Array.from({ length: 12 }, (_, i) => {
+      const month = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"][i];
+      const count = events.filter((e: any) => {
+        if (!e.event_date) return false;
+        const date = new Date(e.event_date);
+        return date.getFullYear() === currentYear && date.getMonth() === i;
+      }).length;
+      return { month, count };
+    });
 
-  // Get events by status for pie chart
-  const { data: statusData } = await supabase
-    .from("events")
-    .select("status")
+    const topEquipment = equipmentData
+      .sort((a: any, b: any) => (b.total_stock || 0) - (a.total_stock || 0))
+      .slice(0, 5)
+      .map((e: any) => ({
+        ...e,
+        total_quantity: e.total_stock,
+        available_quantity: e.available_stock
+      }));
 
-  const statusCounts: Record<EventStatus, number> = {
-    pending: 0,
-    survey: 0,
-    deal: 0,
-    running: 0,
-    selesai: 0,
-    cancel: 0,
-  }
+    const crewList = crewData.slice(0, 6).map((c: any) => ({
+      ...c,
+      full_name: c.name,
+      position: c.role,
+      availability: c.status === 'available' ? 'tersedia' : 'on_job'
+    }));
 
-  statusData?.forEach((e) => {
-    statusCounts[e.status as EventStatus]++
-  })
+    return {
+      stats: { totalEvents, eventsToday, totalRevenue, availableEquipment, totalEquipment, availableCrew, totalCrew },
+      recentEvents,
+      upcomingEvents,
+      eventsByStatus,
+      monthlyEvents,
+      topEquipment,
+      crewList,
+    };
+  } catch (error: any) {
+    console.error("Failed to fetch dashboard data:", error);
+    
+    if (error.message === 'Unauthorized') {
+      const { redirect } = await import('next/navigation');
+      redirect('/auth/login');
+    }
 
-  const total = statusData?.length || 0
-  const eventsByStatus = Object.entries(statusCounts).map(([status, count]) => ({
-    status: status as EventStatus,
-    count,
-    percentage: total > 0 ? Math.round((count / total) * 100) : 0,
-  }))
-
-  // Get monthly events for chart (current year)
-  const currentYear = new Date().getFullYear()
-  const { data: monthlyData } = await supabase
-    .from("events")
-    .select("event_date")
-    .gte("event_date", `${currentYear}-01-01`)
-    .lte("event_date", `${currentYear}-12-31`)
-
-  const monthlyEvents = Array.from({ length: 12 }, (_, i) => {
-    const month = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"][i]
-    const count = monthlyData?.filter((e) => {
-      const eventMonth = new Date(e.event_date).getMonth()
-      return eventMonth === i
-    }).length || 0
-    return { month, count }
-  })
-
-  // Get top equipment
-  const { data: topEquipment } = await supabase
-    .from("equipment")
-    .select("*")
-    .order("total_quantity", { ascending: false })
-    .limit(5)
-
-  // Get crew list
-  const { data: crewList } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("role", "crew")
-    .limit(6)
-
-  return {
-    stats: {
-      totalEvents: totalEvents || 0,
-      eventsToday: eventsToday || 0,
-      totalRevenue,
-      availableEquipment,
-      totalEquipment,
-      availableCrew,
-      totalCrew: totalCrew || 0,
-    },
-    recentEvents: recentEvents || [],
-    upcomingEvents: upcomingEvents || [],
-    eventsByStatus,
-    monthlyEvents,
-    topEquipment: topEquipment || [],
-    crewList: crewList || [],
+    // Return empty defaults if fetch fails
+    return {
+      stats: { totalEvents: 0, eventsToday: 0, totalRevenue: 0, availableEquipment: 0, totalEquipment: 0, availableCrew: 0, totalCrew: 0 },
+      recentEvents: [], upcomingEvents: [], eventsByStatus: [], monthlyEvents: [], topEquipment: [], crewList: []
+    };
   }
 }
 

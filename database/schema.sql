@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(120) NOT NULL,
   email VARCHAR(180) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
-  role ENUM('admin','client') NOT NULL DEFAULT 'client',
+  role ENUM('admin','client','crew') NOT NULL DEFAULT 'client',
+  phone VARCHAR(20),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -72,8 +73,8 @@ CREATE TABLE IF NOT EXISTS payments (
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_events_status ON events(status);
-CREATE INDEX idx_events_client ON events(client_id);
-CREATE INDEX idx_equipment_name ON equipment(name);
-CREATE INDEX idx_crew_status ON crew(status);
-CREATE INDEX idx_payments_status ON payments(status);
+DROP INDEX IF EXISTS `idx_events_status`; CREATE INDEX idx_events_status ON events(status);
+DROP INDEX IF EXISTS `idx_events_client`; CREATE INDEX idx_events_client ON events(client_id);
+DROP INDEX IF EXISTS `idx_equipment_name`; CREATE INDEX idx_equipment_name ON equipment(name);
+DROP INDEX IF EXISTS `idx_crew_status`; CREATE INDEX idx_crew_status ON crew(status);
+DROP INDEX IF EXISTS `idx_payments_status`; CREATE INDEX idx_payments_status ON payments(status);

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { fetchAPI } from "@/lib/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,7 +33,6 @@ const eventTypes = [
 
 export default function BookingPage() {
   const router = useRouter()
-  const supabase = createClient()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -45,30 +44,30 @@ export default function BookingPage() {
 
   async function handleSubmit() {
     setLoading(true)
-    const { data: userData } = await supabase.auth.getUser()
+    try {
+      const res = await fetchAPI('/events', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: `${formData.event_type} - ${formData.location}`,
+          type: formData.event_type,
+          eventDate: formData.event_date,
+          location: formData.location,
+          notes: formData.requirements,
+        })
+      })
 
-    if (!userData.user) {
-      router.push("/auth/login")
-      return
-    }
-
-    const { error } = await supabase.from("events").insert({
-      name: `${formData.event_type} - ${formData.location}`,
-      event_type: formData.event_type,
-      event_date: formData.event_date,
-      location: formData.location,
-      requirements: formData.requirements,
-      client_id: userData.user.id,
-      status: "pending",
-    })
-
-    if (!error) {
-      router.push("/client/events")
-    } else {
+      if (res.success) {
+        router.push("/client/events")
+      } else {
+        console.error("Error creating booking:", res.error)
+        alert("Gagal membuat booking: " + (res.error || 'Unknown error'))
+      }
+    } catch (error) {
       console.error("Error creating booking:", error)
       alert("Gagal membuat booking")
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (

@@ -1,8 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,42 +13,21 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import Link from "next/link"
+import { signupAction } from "@/lib/actions"
 
 export default function SignupPage() {
-  const router = useRouter()
-  const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
-  const [formData, setFormData] = useState({
-    full_name: "",
-    email: "",
-    password: "",
-    role: "client",
-    phone: "",
-  })
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleSubmit(formData: FormData) {
     setLoading(true)
     setError("")
 
-    const { data, error } = await supabase.auth.signUp({
-      email: formData.email,
-      password: formData.password,
-      options: {
-        emailRedirectTo:
-          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
-          `${window.location.origin}/auth/callback`,
-        data: {
-          full_name: formData.full_name,
-          role: formData.role,
-        },
-      },
-    })
+    const res = await signupAction(formData)
 
-    if (error) {
-      setError(error.message)
+    if (!res.success) {
+      setError(res.error || "Gagal mendaftar")
       setLoading(false)
       return
     }
@@ -64,14 +41,14 @@ export default function SignupPage() {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Cek Email Anda</CardTitle>
+            <CardTitle className="text-2xl">Pendaftaran Berhasil!</CardTitle>
             <CardDescription>
-              Kami telah mengirim link konfirmasi ke email Anda. Silakan klik link tersebut untuk mengaktifkan akun.
+              Akun Anda telah berhasil dibuat. Silakan login untuk melanjutkan.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/auth/login">
-              <Button className="w-full bg-primary">Kembali ke Login</Button>
+              <Button className="w-full bg-primary">Lanjut ke Login</Button>
             </Link>
           </CardContent>
         </Card>
@@ -93,7 +70,7 @@ export default function SignupPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form action={handleSubmit} className="space-y-4">
             {error && (
               <div className="p-3 text-sm text-red-500 bg-red-50 rounded-lg">
                 {error}
@@ -103,9 +80,8 @@ export default function SignupPage() {
               <Label htmlFor="full_name">Nama Lengkap</Label>
               <Input
                 id="full_name"
+                name="full_name"
                 placeholder="John Doe"
-                value={formData.full_name}
-                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                 required
               />
             </div>
@@ -113,10 +89,9 @@ export default function SignupPage() {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
                 placeholder="email@example.com"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
               />
             </div>
@@ -124,20 +99,16 @@ export default function SignupPage() {
               <Label htmlFor="phone">No. Telepon</Label>
               <Input
                 id="phone"
+                name="phone"
                 type="tel"
                 placeholder="08123456789"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Daftar sebagai</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value })}
-              >
+              <Select name="role" defaultValue="client">
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Pilih Role" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="client">Client</SelectItem>
@@ -149,10 +120,9 @@ export default function SignupPage() {
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
+                name="password"
                 type="password"
                 placeholder="Min. 6 karakter"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
                 minLength={6}
               />

@@ -1,5 +1,5 @@
 import express from 'express'
-import { authenticate, authorize } from '../middleware/auth.js'
+import { authenticate, authorize } from '../middlewares/auth.js'
 import { fetchEquipment, getEquipment, createEquipment, updateEquipment, deleteEquipment } from '../controllers/equipmentController.js'
 
 const router = express.Router()

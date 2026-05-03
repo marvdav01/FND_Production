@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { fetchAPI } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,12 +23,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Plus, Search, Package, Edit, Trash2 } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 import type { Equipment } from "@/lib/types"
 
 const categories = ["Lighting", "Effects", "Display", "Rigging", "Control", "Audio", "Other"]
 
 export default function InventoryPage() {
-  const supabase = createClient()
   const [equipment, setEquipment] = useState<Equipment[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
@@ -49,20 +49,25 @@ export default function InventoryPage() {
 
   async function fetchEquipment() {
     setLoading(true)
-    let query = supabase.from("equipment").select("*").order("name")
-
-    if (categoryFilter !== "all") {
-      query = query.eq("category", categoryFilter)
-    }
-
-    const { data, error } = await query
-
-    if (error) {
+    try {
+      const endpoint = categoryFilter !== "all" ? `/equipment?category=${categoryFilter}` : '/equipment'
+      const res = await fetchAPI(endpoint)
+      
+      if (res.success) {
+        const mappedData = res.data.map((item: any) => ({
+          ...item,
+          total_quantity: item.total_stock,
+          available_quantity: item.available_stock,
+        }))
+        setEquipment(mappedData)
+      } else {
+        console.error("Error fetching equipment:", res.error)
+      }
+    } catch (error) {
       console.error("Error fetching equipment:", error)
-    } else {
-      setEquipment(data || [])
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const filteredEquipment = equipment.filter((item) =>
@@ -76,36 +81,47 @@ export default function InventoryPage() {
       name: formData.name,
       description: formData.description || null,
       category: formData.category,
-      total_quantity: parseInt(formData.total_quantity),
-      available_quantity: parseInt(formData.available_quantity),
+      totalStock: parseInt(formData.total_quantity),
+      availableStock: parseInt(formData.available_quantity),
     }
 
-    if (editingItem) {
-      const { error } = await supabase
-        .from("equipment")
-        .update(payload)
-        .eq("id", editingItem.id)
+    try {
+      if (editingItem) {
+        const res = await fetchAPI(`/equipment/${editingItem.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        })
 
-      if (!error) {
-        fetchEquipment()
-        closeDialog()
-      }
-    } else {
-      const { error } = await supabase.from("equipment").insert(payload)
+        if (res.success) {
+          fetchEquipment()
+          closeDialog()
+        }
+      } else {
+        const res = await fetchAPI('/equipment', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        })
 
-      if (!error) {
-        fetchEquipment()
-        closeDialog()
+        if (res.success) {
+          fetchEquipment()
+          closeDialog()
+        }
       }
+    } catch (error) {
+      console.error("Error saving equipment:", error)
     }
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Yakin ingin menghapus item ini?")) return
 
-    const { error } = await supabase.from("equipment").delete().eq("id", id)
-    if (!error) {
-      fetchEquipment()
+    try {
+      const res = await fetchAPI(`/equipment/${id}`, { method: 'DELETE' })
+      if (res.success) {
+        fetchEquipment()
+      }
+    } catch (error) {
+      console.error("Error deleting equipment:", error)
     }
   }
 
@@ -261,8 +277,13 @@ export default function InventoryPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-32 w-full" />
             </div>
           ) : filteredEquipment.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">

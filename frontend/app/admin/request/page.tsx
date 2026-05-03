@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { fetchAPI } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,7 +17,7 @@ import { CheckCircle2, XCircle, Eye, Calendar, Clock } from "lucide-react"
 import Link from "next/link"
 import type { Event } from "@/lib/types"
 
-interface EventRequest extends Event {
+interface EventRequest extends Omit<Event, "client"> {
   client: {
     full_name: string
     phone: string
@@ -25,7 +25,6 @@ interface EventRequest extends Event {
 }
 
 export default function RequestPage() {
-  const supabase = createClient()
   const [requests, setRequests] = useState<EventRequest[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -35,31 +34,37 @@ export default function RequestPage() {
 
   async function fetchRequests() {
     setLoading(true)
-    const { data, error } = await supabase
-      .from("events")
-      .select(`
-        *,
-        client:profiles!events_client_id_fkey(full_name, phone)
-      `)
-      .eq("status", "pending")
-      .order("created_at", { ascending: false })
-
-    if (error) {
+    try {
+      const res = await fetchAPI('/events?status=pending')
+      if (res.success) {
+        const mappedData = res.data.map((e: any) => ({
+          ...e,
+          event_type: e.type,
+          total_price: e.total_amount,
+          client: { full_name: e.client_name, phone: e.client_phone || '-' }
+        }))
+        setRequests(mappedData)
+      } else {
+        console.error("Error fetching requests:", res.error)
+      }
+    } catch (error) {
       console.error("Error fetching requests:", error)
-    } else {
-      setRequests(data || [])
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   async function updateStatus(eventId: string, status: "survey" | "cancel") {
-    const { error } = await supabase
-      .from("events")
-      .update({ status })
-      .eq("id", eventId)
-
-    if (!error) {
-      fetchRequests()
+    try {
+      const res = await fetchAPI(`/events/${eventId}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status })
+      })
+      if (res.success) {
+        fetchRequests()
+      }
+    } catch (error) {
+      console.error("Error updating status:", error)
     }
   }
 

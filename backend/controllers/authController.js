@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { pool } from '../db.js'
+import { pool } from '../config/db.js'
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -29,23 +29,67 @@ export async function login(req, res) {
 }
 
 export async function signup(req, res) {
-  const { name, email, password } = req.body
+  const { name, email, password, role } = req.body
   if (!name || !email || !password) {
     return res.status(400).json({ success: false, error: 'Name, email and password are required' })
   }
 
+  // Validate role, default to client
+  const validRole = ['client', 'crew'].includes(role) ? role : 'client'
+
   const hashed = bcrypt.hashSync(password, 10)
+  const connection = await pool.getConnection()
+  
   try {
-    const [result] = await pool.query('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)', [name, email, hashed, 'client'])
-    res.status(201).json({ success: true, data: { userId: result.insertId, email } })
+    await connection.beginTransaction()
+    
+    const [result] = await connection.query(
+      'INSERT INTO users (name, email, password, role, phone) VALUES (?, ?, ?, ?, ?)',
+      [name, email, hashed, validRole, req.body.phone || null]
+    )
+    
+    const userId = result.insertId
+    
+    // If registered as crew, also add to crew table for assignment
+    if (validRole === 'crew') {
+      await connection.query(
+        'INSERT INTO crew (name, role, phone) VALUES (?, ?, ?)',
+        [name, 'Support', req.body.phone || null]
+      )
+    }
+    
+    await connection.commit()
+    res.status(201).json({ success: true, data: { userId, email } })
   } catch (error) {
+    await connection.rollback()
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ success: false, error: 'Email already exists' })
     }
     res.status(500).json({ success: false, error: error.message })
+  } finally {
+    connection.release()
   }
 }
 
 export async function profile(req, res) {
   res.json({ success: true, data: req.user })
+}
+export async function getUsers(req, res) {
+  const { role } = req.query
+  let query = 'SELECT id, name AS full_name, email, role, phone FROM users'
+  const params = []
+  
+  if (role) {
+    query += ' WHERE role = ?'
+    params.push(role)
+  }
+  
+  query += ' ORDER BY name ASC'
+  
+  try {
+    const [rows] = await pool.query(query, params)
+    res.json({ success: true, data: rows })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
 }

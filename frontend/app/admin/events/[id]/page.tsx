@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, use } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { fetchAPI } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -42,7 +42,6 @@ const statusOrder: EventStatus[] = ["pending", "survey", "deal", "running", "sel
 
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const supabase = createClient()
   const [event, setEvent] = useState<Event | null>(null)
   const [eventEquipment, setEventEquipment] = useState<any[]>([])
   const [eventCrew, setEventCrew] = useState<any[]>([])
@@ -55,63 +54,48 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
   async function fetchEventDetails() {
     setLoading(true)
-
-    // Fetch event
-    const { data: eventData } = await supabase
-      .from("events")
-      .select(`
-        *,
-        client:profiles!events_client_id_fkey(id, full_name, phone, address)
-      `)
-      .eq("id", id)
-      .single()
-
-    if (eventData) {
-      setEvent(eventData)
+    try {
+      const res = await fetchAPI(`/events/${id}`)
+      if (res.success) {
+        const e = res.data
+        setEvent({
+          ...e,
+          event_type: e.type,
+          total_price: e.total_amount,
+          client: { full_name: e.client_name, phone: e.client_phone || "-" }
+        } as any)
+        
+        setEventEquipment(e.equipment?.map((eq: any) => ({
+          id: eq.id,
+          quantity: eq.quantity,
+          equipment: { name: eq.name, category: 'Equipment' }
+        })) || [])
+        
+        setEventCrew(e.crew?.map((c: any) => ({
+          id: c.id,
+          role: c.task || c.role,
+          crew: { full_name: c.name, position: c.role }
+        })) || [])
+        
+        setPayments(e.payments || [])
+      }
+    } catch (error) {
+      console.error("Error fetching event details:", error)
     }
-
-    // Fetch equipment
-    const { data: eqData } = await supabase
-      .from("event_equipment")
-      .select(`
-        *,
-        equipment(*)
-      `)
-      .eq("event_id", id)
-
-    setEventEquipment(eqData || [])
-
-    // Fetch crew
-    const { data: crewData } = await supabase
-      .from("event_crew")
-      .select(`
-        *,
-        crew:profiles(*)
-      `)
-      .eq("event_id", id)
-
-    setEventCrew(crewData || [])
-
-    // Fetch payments
-    const { data: paymentData } = await supabase
-      .from("payments")
-      .select("*")
-      .eq("event_id", id)
-      .order("created_at")
-
-    setPayments(paymentData || [])
-
     setLoading(false)
   }
 
   async function updateStatus(newStatus: EventStatus) {
-    const { error } = await supabase
-      .from("events")
-      .update({ status: newStatus })
-      .eq("id", id)
-
-    if (!error) {
-      setEvent((prev) => (prev ? { ...prev, status: newStatus } : null))
+    try {
+      const res = await fetchAPI(`/events/${id}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: newStatus })
+      })
+      if (res.success) {
+        setEvent((prev) => (prev ? { ...prev, status: newStatus } : null))
+      }
+    } catch (error) {
+      console.error("Error updating status:", error)
     }
   }
 
@@ -430,16 +414,28 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                       </div>
                       <div className="text-right">
                         <p className="font-medium">{formatCurrency(Number(payment.amount))}</p>
-                        <Badge
-                          variant="outline"
-                          className={
-                            payment.status === "lunas"
-                              ? "bg-green-100 text-green-700 border-green-300"
-                              : "bg-amber-100 text-amber-700 border-amber-300"
-                          }
-                        >
-                          {payment.status === "lunas" ? "Lunas" : "Belum Lunas"}
-                        </Badge>
+                        <div className="flex flex-col items-end gap-2 mt-1">
+                          <Badge
+                            variant="outline"
+                            className={
+                              payment.status === "lunas"
+                                ? "bg-green-100 text-green-700 border-green-300"
+                                : "bg-amber-100 text-amber-700 border-amber-300"
+                            }
+                          >
+                            {payment.status === "lunas" ? "Lunas" : "Belum Lunas"}
+                          </Badge>
+                          {payment.proof_url && (
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="h-auto p-0 text-xs text-primary"
+                              onClick={() => window.open(`http://localhost:4000${payment.proof_url}`, '_blank')}
+                            >
+                              Lihat Bukti
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

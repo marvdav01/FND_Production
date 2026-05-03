@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { fetchAPI } from "@/lib/api"
+import { logoutAction } from "@/lib/actions"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -23,7 +24,6 @@ import type { Profile } from "@/lib/types"
 
 export default function ClientProfilePage() {
   const router = useRouter()
-  const supabase = createClient()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(true)
@@ -35,26 +35,33 @@ export default function ClientProfilePage() {
 
   async function fetchProfile() {
     setLoading(true)
-    const { data: userData } = await supabase.auth.getUser()
-
-    if (userData.user) {
-      setEmail(userData.user.email || "")
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userData.user.id)
-        .single()
-
-      if (profileData) {
-        setProfile(profileData)
+    try {
+      const res = await fetchAPI('/auth/profile')
+      if (res.success && res.data) {
+        setEmail(res.data.email || "")
+        setProfile({
+          id: res.data.id,
+          full_name: res.data.name,
+          phone: res.data.phone || "",
+          address: res.data.address || "",
+        } as any)
       }
+    } catch (error) {
+      console.error("Error fetching profile:", error)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   async function handleLogout() {
-    await supabase.auth.signOut()
-    router.push("/")
+    try {
+      await logoutAction()
+      localStorage.removeItem('token')
+      router.push("/auth/login")
+    } catch (error) {
+      console.error("Error logging out:", error)
+      router.push("/")
+    }
   }
 
   if (loading) {

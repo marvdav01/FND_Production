@@ -1,7 +1,17 @@
-import { pool } from '../db.js'
+import { pool } from '../config/db.js'
 
 export async function fetchCrew(req, res) {
-  const [rows] = await pool.query('SELECT * FROM crew ORDER BY status, id DESC')
+  const { status } = req.query
+  let query = 'SELECT * FROM crew'
+  const params = []
+
+  if (status) {
+    query += ' WHERE status = ?'
+    params.push(status)
+  }
+
+  query += ' ORDER BY status, id DESC'
+  const [rows] = await pool.query(query, params)
   res.json({ success: true, data: rows })
 }
 

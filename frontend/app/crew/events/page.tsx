@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { fetchAPI } from "@/lib/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, Clock } from "lucide-react"
@@ -18,7 +18,6 @@ const statusColors: Record<EventStatus, string> = {
 }
 
 export default function CrewEventsPage() {
-  const supabase = createClient()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -28,27 +27,23 @@ export default function CrewEventsPage() {
 
   async function fetchAssignments() {
     setLoading(true)
-    const { data: userData } = await supabase.auth.getUser()
-
-    if (userData.user) {
-      const { data: assignments } = await supabase
-        .from("event_crew")
-        .select("event_id")
-        .eq("crew_id", userData.user.id)
-
-      if (assignments && assignments.length > 0) {
-        const eventIds = assignments.map((a) => a.event_id)
-
-        const { data: eventsData } = await supabase
-          .from("events")
-          .select("*")
-          .in("id", eventIds)
-          .order("event_date", { ascending: true })
-
-        setEvents(eventsData || [])
+    try {
+      const res = await fetchAPI('/events/assigned')
+      if (res.success) {
+        const mappedData = res.data.map((e: any) => ({
+          ...e,
+          event_type: e.type,
+          total_price: e.total_amount
+        }))
+        setEvents(mappedData)
+      } else {
+        console.error("Error fetching assignments:", res.error)
       }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const formatDate = (date: string) => {

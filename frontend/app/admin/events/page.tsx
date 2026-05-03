@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { fetchAPI } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import type { Event, EventStatus } from "@/lib/types"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const statusColors: Record<EventStatus, string> = {
   pending: "bg-gray-100 text-gray-700 border-gray-300",
@@ -54,7 +55,6 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
-  const supabase = createClient()
 
   useEffect(() => {
     fetchEvents()
@@ -62,26 +62,27 @@ export default function EventsPage() {
 
   async function fetchEvents() {
     setLoading(true)
-    let query = supabase
-      .from("events")
-      .select(`
-        *,
-        client:profiles!events_client_id_fkey(id, full_name, phone)
-      `)
-      .order("event_date", { ascending: true })
-
-    if (statusFilter !== "all") {
-      query = query.eq("status", statusFilter)
-    }
-
-    const { data, error } = await query
-
-    if (error) {
+    try {
+      const endpoint = statusFilter !== "all" ? `/events?status=${statusFilter}` : '/events'
+      const res = await fetchAPI(endpoint)
+      
+      if (res.success) {
+        // Map backend snake_case to frontend expected format
+        const mappedData = res.data.map((e: any) => ({
+          ...e,
+          event_type: e.type,
+          total_price: e.total_amount,
+          client: { full_name: e.client_name, phone: '' }
+        }))
+        setEvents(mappedData)
+      } else {
+        console.error("Error fetching events:", res.error)
+      }
+    } catch (error) {
       console.error("Error fetching events:", error)
-    } else {
-      setEvents(data || [])
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const filteredEvents = events.filter(
@@ -152,8 +153,12 @@ export default function EventsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <div className="space-y-3">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
             </div>
           ) : filteredEvents.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">

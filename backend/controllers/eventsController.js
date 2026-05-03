@@ -1,10 +1,9 @@
-import { pool } from '../db.js'
+import { pool } from '../config/db.js'
 
-const statusOrder = ['pending', 'survey', 'deal', 'running', 'done', 'cancel']
 
 export async function fetchEvents(req, res) {
   const { status, clientId } = req.query
-  let query = 'SELECT e.*, u.name AS client_name FROM events e JOIN users u ON e.client_id = u.id'
+  let query = 'SELECT e.*, u.name AS client_name, u.phone AS client_phone FROM events e JOIN users u ON e.client_id = u.id'
   const params = []
   const conditions = []
 
@@ -50,7 +49,7 @@ export async function getEvent(req, res) {
     return res.status(403).json({ success: false, error: 'Forbidden' })
   }
 
-  const [[equipment]] = await pool.query(
+  const [equipment] = await pool.query(
     `SELECT eq.id, eq.name, ee.quantity
      FROM event_equipment ee
      JOIN equipment eq ON ee.equipment_id = eq.id
@@ -58,7 +57,7 @@ export async function getEvent(req, res) {
     [eventId],
   )
 
-  const [[crewMembers]] = await pool.query(
+  const [crewMembers] = await pool.query(
     `SELECT c.id, c.name, c.role, c.status, ec.task
      FROM event_crew ec
      JOIN crew c ON ec.crew_id = c.id
@@ -66,7 +65,7 @@ export async function getEvent(req, res) {
     [eventId],
   )
 
-  const [[payments]] = await pool.query(
+  const [payments] = await pool.query(
     `SELECT * FROM payments WHERE event_id = ? ORDER BY created_at DESC`,
     [eventId],
   )
@@ -92,26 +91,76 @@ export async function createEvent(req, res) {
   }
 
   const clientId = req.user.role === 'client' ? req.user.id : req.body.clientId || req.user.id
-  const [result] = await pool.query(
-    'INSERT INTO events (name, type, event_date, location, notes, client_id, total_amount, dp_amount, paid_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [name, type, eventDate, location, notes, clientId, totalAmount || 0, dpAmount || 0, dpAmount || 0],
-  )
+  const connection = await pool.getConnection()
 
-  const eventId = result.insertId
+  try {
+    await connection.beginTransaction()
 
-  for (const item of equipment) {
-    if (!item.equipmentId || !item.quantity) continue
-    await pool.query('INSERT INTO event_equipment (event_id, equipment_id, quantity) VALUES (?, ?, ?)', [eventId, item.equipmentId, item.quantity])
-    await pool.query('UPDATE equipment SET available_stock = GREATEST(available_stock - ?, 0) WHERE id = ?', [item.quantity, item.equipmentId])
+    // 1. Check Crew Conflict
+    if (crew.length > 0) {
+      const crewIds = crew.map(m => m.crewId)
+      const [busyCrew] = await connection.query(
+        `SELECT c.name, e.name as event_name 
+         FROM event_crew ec 
+         JOIN crew c ON ec.crew_id = c.id 
+         JOIN events e ON ec.event_id = e.id 
+         WHERE ec.crew_id IN (?) AND e.event_date = ? AND e.status != 'cancel'`,
+        [crewIds, eventDate]
+      )
+
+      if (busyCrew.length > 0) {
+        await connection.rollback()
+        return res.status(400).json({ 
+          success: false, 
+          error: `Konflik Jadwal: ${busyCrew[0].name} sudah bertugas di event "${busyCrew[0].event_name}" pada tanggal tersebut.` 
+        })
+      }
+    }
+
+    // 2. Check Equipment Stock
+    for (const item of equipment) {
+      if (!item.equipmentId || !item.quantity) continue
+      const [stockRows] = await connection.query(
+        'SELECT name, available_stock FROM equipment WHERE id = ?',
+        [item.equipmentId]
+      )
+      if (stockRows[0] && stockRows[0].available_stock < item.quantity) {
+        await connection.rollback()
+        return res.status(400).json({
+          success: false,
+          error: `Stok Tidak Cukup: ${stockRows[0].name} hanya tersedia ${stockRows[0].available_stock} unit.`
+        })
+      }
+    }
+
+    const [result] = await connection.query(
+      'INSERT INTO events (name, type, event_date, location, notes, client_id, total_amount, dp_amount, paid_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [name, type, eventDate, location, notes, clientId, totalAmount || 0, dpAmount || 0, dpAmount || 0],
+    )
+
+    const eventId = result.insertId
+
+    for (const item of equipment) {
+      if (!item.equipmentId || !item.quantity) continue
+      await connection.query('INSERT INTO event_equipment (event_id, equipment_id, quantity) VALUES (?, ?, ?)', [eventId, item.equipmentId, item.quantity])
+      await connection.query('UPDATE equipment SET available_stock = GREATEST(available_stock - ?, 0) WHERE id = ?', [item.quantity, item.equipmentId])
+    }
+
+    for (const member of crew) {
+      if (!member.crewId) continue
+      await connection.query('INSERT INTO event_crew (event_id, crew_id, task) VALUES (?, ?, ?)', [eventId, member.crewId, member.task || 'Support'])
+      // Update crew status to on_job if it was available
+      await connection.query('UPDATE crew SET status = ? WHERE id = ?', ['on_job', member.crewId])
+    }
+
+    await connection.commit()
+    res.status(201).json({ success: true, data: { eventId }, message: 'Event created' })
+  } catch (error) {
+    await connection.rollback()
+    res.status(500).json({ success: false, error: error.message })
+  } finally {
+    connection.release()
   }
-
-  for (const member of crew) {
-    if (!member.crewId) continue
-    await pool.query('INSERT INTO event_crew (event_id, crew_id, task) VALUES (?, ?, ?)', [eventId, member.crewId, member.task || 'Support'])
-    await pool.query('UPDATE crew SET status = ? WHERE id = ?', ['on_job', member.crewId])
-  }
-
-  res.status(201).json({ success: true, data: { eventId }, message: 'Event created' })
 }
 
 export async function updateEvent(req, res) {
@@ -160,16 +209,49 @@ async function returnEquipmentAndCrew(eventId) {
   }
 }
 
+const statusOrder = ['pending', 'survey', 'deal', 'running', 'done', 'selesai', 'cancel']
+
 export async function updateStatus(req, res) {
-  const eventId = Number(req.params.id)
-  const { status } = req.body
-  if (!statusOrder.includes(status)) {
-    return res.status(400).json({ success: false, error: 'Invalid status' })
+  try {
+    const eventId = Number(req.params.id)
+    const { status } = req.body
+    if (!statusOrder.includes(status)) {
+      return res.status(400).json({ success: false, error: 'Invalid status: ' + status })
+    }
+
+    await pool.query('UPDATE events SET status = ? WHERE id = ?', [status, eventId])
+    if (status === 'done' || status === 'selesai') {
+      await returnEquipmentAndCrew(eventId)
+    }
+    res.json({ success: true, message: 'Event status updated', data: { status } })
+  } catch (error) {
+    console.error('Update status error:', error)
+    res.status(500).json({ success: false, error: 'Internal server error' })
+  }
+}
+
+export async function getAssignedEvents(req, res) {
+  const crewId = req.user.id
+  if (req.user.role !== 'crew') {
+    return res.status(403).json({ success: false, error: 'Only crew can fetch assigned events' })
   }
 
-  await pool.query('UPDATE events SET status = ? WHERE id = ?', [status, eventId])
-  if (status === 'done') {
-    await returnEquipmentAndCrew(eventId)
-  }
-  res.json({ success: true, message: 'Event status updated', data: { status } })
+  // Find crew mapping by user email/phone logic if necessary, or assume user.id maps to crew.user_id 
+  // Wait, the original code used 'crew_id', userData.user.id. 
+  // In our backend schema, how do we link users to crew? 
+  // users table has role='crew'. `crew` table doesn't have `user_id`, just `id`, `name`, `role`, `phone`, `status`.
+  // If the frontend was doing `crew_id`, userData.user.id in Supabase, they had the same ID.
+  // In the new system, we need to match users.email/name to crew.name or handle crew mapping differently.
+  // Wait, let's just use a JOIN with users on phone/name or assume they have matching names for now.
+  const query = `
+    SELECT e.*, ec.task 
+    FROM events e
+    JOIN event_crew ec ON e.id = ec.event_id
+    JOIN crew c ON ec.crew_id = c.id
+    WHERE c.name = ? 
+    ORDER BY e.event_date ASC
+  `
+  // We'll use the user's name to find their crew record, as crew table doesn't have user_id
+  const [rows] = await pool.query(query, [req.user.name])
+  res.json({ success: true, data: rows })
 }
