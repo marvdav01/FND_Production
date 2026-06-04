@@ -1,43 +1,66 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { api } from '../../services/api';
 
 const TABS = ['Semua', 'On Going', 'Selesai', 'Dibatalkan'];
 
-const EVENTS = [
-  {
-    id: 1, title: 'Wedding Andi & Sinta',
-    date: '11 Mei 2024', time: '08.00 – Selesai',
-    location: 'Gedung Graha Sarana, Jakarta',
-    status: 'On Going', statusBg: 'bg-emerald-100', statusText: 'text-emerald-600',
-    progress: 79,
-    image: 'https://images.unsplash.com/photo-1519741347686-c1e0aadf4611?w=400&q=80',
-  },
-  {
-    id: 2, title: 'Corporate Gathering PT Maju',
-    date: '26 Jun 2024', time: '13.00 – 22.00',
-    location: 'Hotel Grand Zuri, Jakarta',
-    status: 'On Going', statusBg: 'bg-blue-100', statusText: 'text-blue-600',
-    progress: 20,
-    image: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=400&q=80',
-  },
-  {
-    id: 3, title: 'Seminar Nasional 2024',
-    date: '10 Apr 2024',
-    location: 'Hotel Indonesia Kempinski',
-    status: 'Selesai', statusBg: 'bg-emerald-100', statusText: 'text-emerald-600',
-    progress: 100,
-    image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&q=80',
-  },
-];
+const STATUS_MAP: Record<string, string> = {
+  running: 'On Going',
+  deal: 'On Going',
+  done: 'Selesai',
+  selesai: 'Selesai',
+  cancel: 'Dibatalkan',
+  pending: 'Semua',
+  survey: 'Semua',
+};
+
+const STATUS_COLOR: Record<string, { bg: string; text: string }> = {
+  'On Going': { bg: 'bg-emerald-100', text: 'text-emerald-600' },
+  Selesai: { bg: 'bg-slate-100', text: 'text-slate-500' },
+  Dibatalkan: { bg: 'bg-red-100', text: 'text-red-600' },
+};
 
 export const EventSayaScreen = ({ navigation }: any) => {
   const [activeTab, setActiveTab] = useState('Semua');
-  const filtered = EVENTS.filter(e => activeTab === 'Semua' || e.status === activeTab);
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      setLoading(true);
+      try {
+        const response = await api.get('/events');
+        if (response.data?.success) {
+          setEvents(response.data.data || []);
+        } else {
+          throw new Error(response.data?.error || 'Gagal memuat event');
+        }
+      } catch (error: any) {
+        Alert.alert('Error', error.response?.data?.error || error.message || 'Gagal mengambil data event');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvents();
+  }, []);
+
+  const filtered = events.filter((e) => {
+    if (activeTab === 'Semua') return true;
+    const displayStatus = STATUS_MAP[e.status] || 'Semua';
+    return displayStatus === activeTab;
+  });
+
+  if (loading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-white">
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-white">
-      {/* Tabs */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} className="border-b border-slate-100" contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}>
         {TABS.map((tab) => (
           <TouchableOpacity
@@ -51,47 +74,60 @@ export const EventSayaScreen = ({ navigation }: any) => {
       </ScrollView>
 
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
-        {filtered.map((event) => (
-          <TouchableOpacity
-            key={event.id}
-            className="bg-white rounded-3xl mb-5 border border-slate-100 overflow-hidden"
-            style={{ elevation: 3, shadowColor: '#0F172A', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}
-            onPress={() => navigation.navigate('DetailEvent', { eventId: event.id })}
-          >
-            {/* Image */}
-            <Image source={{ uri: event.image }} className="w-full h-36" resizeMode="cover" />
+        {filtered.map((event) => {
+          const displayStatus = STATUS_MAP[event.status] || event.status || 'Semua';
+          const statusStyle = STATUS_COLOR[displayStatus] || { bg: 'bg-slate-100', text: 'text-slate-500' };
 
-            <View className="p-4">
-              <View className="flex-row justify-between items-start mb-2">
-                <Text className="text-primary font-bold text-base flex-1 mr-2">{event.title}</Text>
-                <View className={`${event.statusBg} px-3 py-1 rounded-full`}>
-                  <Text className={`${event.statusText} font-bold text-[10px]`}>{event.status}</Text>
-                </View>
-              </View>
-              <View className="flex-row items-center mb-0.5">
-                <Ionicons name="calendar-outline" size={12} color="#94A3B8" />
-                <Text className="text-slate-400 text-xs ml-1">{event.date} {event.time ? `• ${event.time}` : ''}</Text>
-              </View>
-              <View className="flex-row items-center mb-3">
-                <Ionicons name="location-outline" size={12} color="#94A3B8" />
-                <Text className="text-slate-400 text-xs ml-1">{event.location}</Text>
-              </View>
+          return (
+            <TouchableOpacity
+              key={event.id}
+              className="bg-white rounded-3xl mb-5 border border-slate-100 overflow-hidden"
+              style={{ elevation: 3, shadowColor: '#0F172A', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}
+              onPress={() => navigation.navigate('DetailEventClient', { eventId: event.id })}
+            >
+              <Image
+                source={{ uri: event.image || 'https://images.unsplash.com/photo-1519741347686-c1e0aadf4611?w=400&q=80' }}
+                className="w-full h-36"
+                resizeMode="cover"
+              />
 
-              {/* Progress */}
-              {event.progress !== undefined && (
-                <View>
-                  <View className="flex-row justify-between mb-1.5">
-                    <Text className="text-slate-500 text-xs font-medium">Progress</Text>
-                    <Text className="text-primary text-xs font-bold">{event.progress}%</Text>
-                  </View>
-                  <View className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <View className="h-full bg-accent rounded-full" style={{ width: `${event.progress}%` }} />
+              <View className="p-4">
+                <View className="flex-row justify-between items-start mb-2">
+                  <Text className="text-primary font-bold text-base flex-1 mr-2">{event.name || event.title}</Text>
+                  <View className={`${statusStyle.bg} px-3 py-1 rounded-full`}>
+                    <Text className={`${statusStyle.text} font-bold text-[10px]`}>{displayStatus}</Text>
                   </View>
                 </View>
-              )}
-            </View>
-          </TouchableOpacity>
-        ))}
+                <View className="flex-row items-center mb-0.5">
+                  <Ionicons name="calendar-outline" size={12} color="#94A3B8" />
+                  <Text className="text-slate-400 text-xs ml-1">{event.event_date || event.date}</Text>
+                </View>
+                <View className="flex-row items-center mb-3">
+                  <Ionicons name="location-outline" size={12} color="#94A3B8" />
+                  <Text className="text-slate-400 text-xs ml-1">{event.location}</Text>
+                </View>
+
+                {event.progress !== undefined && (
+                  <View>
+                    <View className="flex-row justify-between mb-1.5">
+                      <Text className="text-slate-500 text-xs font-medium">Progress</Text>
+                      <Text className="text-primary text-xs font-bold">{event.progress}%</Text>
+                    </View>
+                    <View className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <View className="h-full bg-accent rounded-full" style={{ width: `${event.progress}%` }} />
+                    </View>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+
+        {filtered.length === 0 && !loading && (
+          <View className="items-center mt-20">
+            <Text className="text-slate-500">Belum ada event untuk ditampilkan.</Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );

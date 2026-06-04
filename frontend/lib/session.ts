@@ -10,6 +10,12 @@ export async function setSession(token: string) {
   })
 }
 
+export function setClientSession(token: string) {
+  if (typeof window === 'undefined') return
+  const secure = process.env.NODE_ENV === 'production' ? 'secure; ' : ''
+  document.cookie = `session=${token}; path=/; max-age=${60 * 60 * 2}; SameSite=Lax; ${secure}`
+}
+
 export async function getSession() {
   try {
     const { cookies } = await import('next/headers')
@@ -20,6 +26,11 @@ export async function getSession() {
     console.error('[getSession] Error:', e.message)
     return null
   }
+}
+
+export function clearClientSession() {
+  if (typeof window === 'undefined') return
+  document.cookie = 'session=; path=/; max-age=0; SameSite=Lax;'
 }
 
 export async function clearSession() {

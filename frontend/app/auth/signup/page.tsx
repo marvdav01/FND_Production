@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { FormEvent, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
-import { signupAction } from "@/lib/actions"
+import { fetchAPI } from "@/lib/api"
 import { User, Mail, Phone, Lock, ArrowRight, CheckCircle2 } from "lucide-react"
 
 export default function SignupPage() {
@@ -16,20 +16,36 @@ export default function SignupPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
     setLoading(true)
     setError("")
 
-    const res = await signupAction(formData)
+    const formData = new FormData(event.currentTarget)
 
-    if (!res.success) {
-      setError(res.error || "Gagal mendaftar")
+    try {
+      const res = await fetchAPI('/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: formData.get('full_name') as string,
+          email: formData.get('email') as string,
+          password: formData.get('password') as string,
+          role: formData.get('role') as string,
+          phone: formData.get('phone') as string,
+        }),
+      })
+
+      if (!res.success) {
+        setError(res.error || "Gagal mendaftar")
+        return
+      }
+
+      setSuccess(true)
+    } catch (err: any) {
+      setError(err?.message || "Terjadi kesalahan pada server")
+    } finally {
       setLoading(false)
-      return
     }
-
-    setSuccess(true)
-    setLoading(false)
   }
 
   if (success) {
@@ -86,7 +102,7 @@ export default function SignupPage() {
         </div>
 
         <div className="bg-white/5 backdrop-blur-3xl border border-white/10 p-8 rounded-3xl shadow-2xl sm:p-10">
-          <form action={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
               <div className="p-4 text-sm text-red-200 bg-red-500/20 border border-red-500/50 rounded-xl animate-in fade-in zoom-in duration-300">
                 {error}

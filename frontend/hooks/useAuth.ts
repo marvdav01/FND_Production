@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { fetchAPI } from '@/lib/api';
-import { logoutAction } from '@/lib/actions';
+import { clearClientSession } from '@/lib/session';
 import { useRouter } from 'next/navigation';
 
 export interface User {
@@ -40,15 +40,10 @@ export function useAuth() {
   }, []);
 
   const logout = async () => {
-    try {
-      await logoutAction();
-      localStorage.removeItem('token');
-      setUser(null);
-      router.push('/auth/login');
-    } catch (err) {
-      console.error('Logout failed:', err);
-      router.push('/');
-    }
+    localStorage.removeItem('token');
+    clearClientSession();
+    setUser(null);
+    router.push('/auth/login');
   };
 
   return { user, loading, error, logout, setUser };

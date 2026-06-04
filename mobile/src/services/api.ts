@@ -1,7 +1,9 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Gunakan Base URL sementara (sesuaikan dengan URL backend Anda, 10.0.2.2 biasa untuk emulator Android)
-const BASE_URL = 'http://10.0.2.2:3000/api';
+// Gunakan Base URL backend admin/dashboard.
+// Untuk emulator Android gunakan 10.0.2.2, untuk iOS simulator bisa pakai localhost.
+const BASE_URL = 'http://10.0.2.2:4000/api';
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -10,12 +12,13 @@ export const api = axios.create({
   },
 });
 
-// Interceptor untuk menyematkan token JWT nantinya
+// Interceptor untuk menyematkan token JWT dari AsyncStorage
 api.interceptors.request.use(
   async (config) => {
-    // TODO: Ambil token dari AsyncStorage dan sematkan ke Authorization header
-    // const token = await AsyncStorage.getItem('token');
-    // if (token) config.headers.Authorization = `Bearer ${token}`;
+    const token = await AsyncStorage.getItem('token');
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {

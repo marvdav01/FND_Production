@@ -90,22 +90,69 @@ export default function NewEventPage() {
     setLoading(true)
 
     try {
-      const payload = {
+      // Client-side validation
+      if (!formData.name || formData.name.length < 3) {
+        toast.error("Nama event minimal 3 karakter")
+        setLoading(false)
+        return
+      }
+      if (!formData.event_type) {
+        toast.error("Jenis event harus dipilih")
+        setLoading(false)
+        return
+      }
+      if (!formData.event_date) {
+        toast.error("Tanggal event harus diisi")
+        setLoading(false)
+        return
+      }
+      if (!formData.location) {
+        toast.error("Lokasi event harus diisi")
+        setLoading(false)
+        return
+      }
+
+      const equipmentPayload = selectedEquipment
+        .map((eq) => ({
+          equipmentId: Number.parseInt(eq.id, 10),
+          quantity: Number.isFinite(eq.quantity) ? eq.quantity : 0,
+        }))
+        .filter((item) => item.equipmentId > 0 && item.quantity > 0)
+
+      if (selectedEquipment.length > 0 && equipmentPayload.length !== selectedEquipment.length) {
+        toast.error("Periksa kembali jumlah equipment. Semua equipment harus memiliki kuantitas valid.")
+        setLoading(false)
+        return
+      }
+
+      const payload: any = {
         name: formData.name,
         type: formData.event_type,
         eventDate: formData.event_date,
         location: formData.location,
-        notes: formData.notes,
+        notes: formData.notes || "",
         totalAmount: parseFloat(formData.total_price) || 0,
         dpAmount: 0,
-        clientId: formData.client_id || null,
-        equipment: selectedEquipment.map(eq => ({ equipmentId: eq.id, quantity: eq.quantity })),
-        crew: []
+        crew: [],
+      }
+
+      if (formData.client_id) {
+        const parsedClientId = Number.parseInt(formData.client_id, 10)
+        if (Number.isNaN(parsedClientId)) {
+          toast.error("Client tidak valid")
+          setLoading(false)
+          return
+        }
+        payload.clientId = parsedClientId
+      }
+
+      if (equipmentPayload.length > 0) {
+        payload.equipment = equipmentPayload
       }
 
       const res = await fetchAPI('/events', {
         method: 'POST',
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       })
 
       if (res.success) {
@@ -116,7 +163,15 @@ export default function NewEventPage() {
       }
     } catch (error: any) {
       console.error("Error creating event:", error)
-      toast.error(error.message || "Terjadi kesalahan sistem")
+      // If backend returned validation details, show them to the user
+      if (error?.data?.details && Array.isArray(error.data.details)) {
+        const messages = error.data.details.map((d: any) => d.message || JSON.stringify(d)).join('; ')
+        toast.error(messages)
+      } else if (error?.data?.error) {
+        toast.error(error.data.error)
+      } else {
+        toast.error(error.message || "Terjadi kesalahan sistem")
+      }
     } finally {
       setLoading(false)
     }
@@ -133,9 +188,10 @@ export default function NewEventPage() {
   }
 
   const updateEquipmentQuantity = (equipmentId: string, quantity: number) => {
+    const safeQuantity = Number.isFinite(quantity) ? Math.max(1, quantity) : 1
     setSelectedEquipment(
       selectedEquipment.map((eq) =>
-        eq.id === equipmentId ? { ...eq, quantity: Math.max(1, quantity) } : eq
+        eq.id === equipmentId ? { ...eq, quantity: safeQuantity } : eq
       )
     )
   }

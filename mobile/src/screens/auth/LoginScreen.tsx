@@ -1,28 +1,43 @@
 import React, { useState } from 'react';
-import { View, Text, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { useDispatch } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loginSuccess, User } from '../../store/slices/authSlice';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
+import { api } from '../../services/api';
 
 export const LoginScreen = ({ navigation }: any) => {
   const { control, handleSubmit, formState: { errors } } = useForm();
   const dispatch = useDispatch();
   const [isLoading, setIsLoading] = useState(false);
 
-  const onSubmit = (data: any) => {
+  const onSubmit = async (data: any) => {
     setIsLoading(true);
-    // TODO: Ganti dengan pemanggilan API nyata
-    setTimeout(() => {
-      // Mock login berhasil, tentukan role dari email (crew@... -> CREW)
-      const role: User['role'] = data.email.includes('crew') ? 'CREW' : 'CLIENT';
-      dispatch(loginSuccess({
-        user: { id: '1', name: 'User Test', email: data.email, role },
-        token: 'mock-jwt-token-123'
-      }));
+
+    try {
+      const response = await api.post('/auth/login', {
+        email: data.email,
+        password: data.password,
+      });
+
+      const payload = response.data?.data || response.data;
+      const token = payload?.token;
+      const user = payload?.user;
+
+      if (!token || !user) {
+        throw new Error('Login gagal, coba lagi.');
+      }
+
+      const role: User['role'] = user.role === 'crew' ? 'CREW' : 'CLIENT';
+      await AsyncStorage.setItem('token', token);
+      dispatch(loginSuccess({ user: { id: String(user.id), name: user.name, email: user.email, role }, token }));
+    } catch (error: any) {
+      Alert.alert('Login Error', error.response?.data?.error || error.message || 'Terjadi kesalahan');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (

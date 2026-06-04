@@ -30,11 +30,9 @@ export function middleware(request: NextRequest) {
 
   const isAuthRoute = pathname.startsWith('/auth')
   const isAdminRoute = pathname.startsWith('/admin')
-  const isClientRoute = pathname.startsWith('/client')
-  const isCrewRoute = pathname.startsWith('/crew')
 
   // 1. If accessing protected route without session
-  if ((isAdminRoute || isClientRoute || isCrewRoute) && !session) {
+  if (isAdminRoute && !session) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
@@ -43,7 +41,7 @@ export function middleware(request: NextRequest) {
     const payload = decodeJWT(session)
     const role = payload?.role
 
-    if (!payload || !role || !['admin', 'client', 'crew'].includes(role)) {
+    if (!payload || role !== 'admin') {
       const response = NextResponse.redirect(new URL('/auth/login', request.url))
       response.cookies.delete('session')
       return response
@@ -51,25 +49,7 @@ export function middleware(request: NextRequest) {
 
     // Redirect logged-in users away from auth routes
     if (isAuthRoute) {
-      if (role === 'admin') return NextResponse.redirect(new URL('/admin', request.url))
-      if (role === 'crew') return NextResponse.redirect(new URL('/crew', request.url))
-      return NextResponse.redirect(new URL('/client', request.url))
-    }
-
-    // Role-based protection
-    if (isAdminRoute && role !== 'admin') {
-      const target = role === 'crew' ? '/crew' : '/client'
-      return NextResponse.redirect(new URL(target, request.url))
-    }
-
-    if (isCrewRoute && role !== 'crew') {
-      const target = role === 'admin' ? '/admin' : '/client'
-      return NextResponse.redirect(new URL(target, request.url))
-    }
-
-    if (isClientRoute && role !== 'client') {
-      const target = role === 'admin' ? '/admin' : '/crew'
-      return NextResponse.redirect(new URL(target, request.url))
+      return NextResponse.redirect(new URL('/admin', request.url))
     }
   }
 

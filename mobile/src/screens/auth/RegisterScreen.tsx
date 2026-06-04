@@ -1,24 +1,42 @@
 import React, { useState } from 'react';
-import { View, Text, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
+import { api } from '../../services/api';
 
 export const RegisterScreen = ({ navigation }: any) => {
   const { control, handleSubmit, formState: { errors }, watch } = useForm();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'CLIENT' | 'CREW'>('CLIENT');
 
-  const password = watch("password");
+  const password = watch('password');
 
-  const onSubmit = (data: any) => {
+  const onSubmit = async (data: any) => {
+    if (selectedRole === 'CREW') {
+      Alert.alert('Registrasi Crew', 'Akun crew harus dibuat oleh admin.');
+      return;
+    }
+
     setIsLoading(true);
-    // TODO: Integrasi API Register
-    setTimeout(() => {
+    try {
+      const response = await api.post('/auth/signup', {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+      });
+
+      if (response.data?.success) {
+        Alert.alert('Berhasil', 'Akun client berhasil dibuat. Silakan login.');
+        navigation.navigate('Login');
+      } else {
+        throw new Error(response.data?.error || 'Registrasi gagal');
+      }
+    } catch (error: any) {
+      Alert.alert('Registrasi Error', error.response?.data?.error || error.message || 'Terjadi kesalahan');
+    } finally {
       setIsLoading(false);
-      // Pindah ke Login setelah sukses (atau bisa langsung dispatch login)
-      navigation.navigate('Login');
-    }, 1000);
+    }
   };
 
   return (
@@ -54,8 +72,8 @@ export const RegisterScreen = ({ navigation }: any) => {
             required: 'Email wajib diisi',
             pattern: {
               value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-              message: "Format email tidak valid"
-            }
+              message: 'Format email tidak valid',
+            },
           }}
           render={({ field: { onChange, onBlur, value } }) => (
             <Input
@@ -93,7 +111,7 @@ export const RegisterScreen = ({ navigation }: any) => {
           control={control}
           rules={{ 
             required: 'Konfirmasi password wajib diisi',
-            validate: value => value === password || 'Password tidak cocok'
+            validate: value => value === password || 'Password tidak cocok',
           }}
           render={({ field: { onChange, onBlur, value } }) => (
             <Input

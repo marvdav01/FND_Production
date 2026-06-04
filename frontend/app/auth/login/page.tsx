@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { FormEvent, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
-import { loginAction } from "@/lib/actions"
+import { fetchAPI } from "@/lib/api"
+import { setClientSession } from "@/lib/session"
 import { Mail, Lock, LogIn, ArrowRight } from "lucide-react"
 
 export default function LoginPage() {
@@ -15,31 +16,48 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
     setLoading(true)
     setError("")
 
-    const res = await loginAction(formData)
-    
-    if (!res.success) {
-      setError(res.error || "Gagal masuk")
-      setLoading(false)
-      return
-    }
+    const formData = new FormData(event.currentTarget)
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
 
-    if (res.success && res.token) {
-      localStorage.setItem('token', res.token)
-      if (res.user) {
-        if (res.user.role === "admin") {
-          router.push("/admin")
-        } else if (res.user.role === "crew") {
-          router.push("/crew")
-        } else {
-          router.push("/client")
-        }
+    try {
+      const res = await fetchAPI('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      })
+
+      if (!res.success) {
+        setError(res.error || "Gagal masuk")
+        return
       }
+
+      const token = res.data?.token ?? res.token
+      const user = res.data?.user ?? res.user
+
+      if (!token || !user) {
+        setError("Gagal mengambil data pengguna")
+        return
+      }
+
+      localStorage.setItem('token', token)
+      setClientSession(token)
+
+      if (user.role !== "admin") {
+        setError("Akun hanya dapat mengakses admin")
+        return
+      }
+
+      router.push("/admin")
+    } catch (err: any) {
+      setError(err?.message || "Terjadi kesalahan pada server")
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
@@ -67,7 +85,7 @@ export default function LoginPage() {
         </div>
 
         <div className="bg-white/5 backdrop-blur-3xl border border-white/10 p-8 rounded-3xl shadow-2xl sm:p-10">
-          <form action={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div className="p-4 text-sm text-red-200 bg-red-500/20 border border-red-500/50 rounded-xl animate-in fade-in zoom-in duration-300">
                 {error}

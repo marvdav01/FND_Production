@@ -1,7 +1,14 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const isServer = typeof window === 'undefined'
+
+  // On server, make sure we use an absolute URL so Node's fetch works correctly.
+  const serverBase = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000/api'
+  const clientBase = process.env.NEXT_PUBLIC_API_URL || '/api'
+  const base = isServer ? serverBase : clientBase
+
+  const url = `${base}${endpoint}`
   
   const isFormData = options.body instanceof FormData;
   const headers: Record<string, string> = {
@@ -16,7 +23,7 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
         headers['Authorization'] = `Bearer ${token}`;
       }
     } else {
-      // Server-side
+      // Server-side: try to read session cookie (set by server-side helpers)
       try {
         const { getSession } = await import('./session');
         const session = await getSession();
@@ -29,10 +36,16 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     }
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let response: Response
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    })
+  } catch (err: any) {
+    console.error('[fetchAPI] Fetch error:', err?.message || err)
+    throw new Error('Terjadi kesalahan pada server')
+  }
 
   let data;
   try {
@@ -42,7 +55,10 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(data.error || 'Terjadi kesalahan pada server');
+    const err: any = new Error(data.error || 'Terjadi kesalahan pada server')
+    err.status = response.status
+    err.data = data
+    throw err
   }
 
   return data;
