@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { fetchAPI } from "@/lib/api"
+import { fetchAPI, API_BASE_URL } from "@/lib/api"
 import { logoutAction } from "@/lib/actions"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -19,14 +19,18 @@ import {
   LogOut,
   ChevronRight,
   Settings,
+  Camera,
 } from "lucide-react"
 import type { Profile, CrewAvailability } from "@/lib/types"
 
 export default function CrewProfilePage() {
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [email, setEmail] = useState("")
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
   const [notifications, setNotifications] = useState(true)
 
   useEffect(() => {
@@ -39,12 +43,13 @@ export default function CrewProfilePage() {
       const res = await fetchAPI('/auth/profile')
       if (res.success && res.data) {
         setEmail(res.data.email || "")
+        setAvatarUrl(res.data.avatar_url || null)
         setProfile({
           id: res.data.id,
           full_name: res.data.name,
           phone: res.data.phone || "",
           position: res.data.role === 'crew' ? "Crew" : res.data.role,
-          availability: "tersedia" // Note: Local backend currently doesn't link user id directly to crew table status in a simple way for self-service
+          availability: "tersedia"
         } as any)
       }
     } catch (err) {
@@ -54,13 +59,41 @@ export default function CrewProfilePage() {
     }
   }
 
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('avatar', file)
+
+      const res = await fetchAPI('/auth/profile/avatar', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (res.success && res.data) {
+        setAvatarUrl(res.data.avatar_url)
+      }
+    } catch (error) {
+      console.error("Error uploading avatar:", error)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function getAvatarSrc(url: string | null): string | null {
+    if (!url) return null
+    if (url.startsWith('http')) return url
+    const backendBase = API_BASE_URL.replace('/api', '')
+    return `${backendBase}${url}`
+  }
+
   async function toggleAvailability() {
     if (!profile) return
-
     const newAvailability: CrewAvailability =
       profile.availability === "tersedia" ? "on_job" : "tersedia"
-
-    // Mocking update for UI purposes
     setProfile({ ...profile, availability: newAvailability })
   }
 
@@ -83,6 +116,8 @@ export default function CrewProfilePage() {
     )
   }
 
+  const avatarSrc = getAvatarSrc(avatarUrl)
+
   return (
     <div className="min-h-screen pb-24">
       {/* Header */}
@@ -95,11 +130,36 @@ export default function CrewProfilePage() {
 
       {/* Avatar */}
       <div className="flex flex-col items-center py-6">
-        <div className="h-24 w-24 rounded-full bg-gray-700 flex items-center justify-center mb-4 relative">
-          <User className="h-12 w-12 text-gray-400" />
-          <div className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-[#1a2029] border-2 border-gray-700 flex items-center justify-center">
-            <Settings className="h-4 w-4 text-gray-400" />
+        <div className="relative mb-4">
+          <div className="h-24 w-24 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden">
+            {avatarSrc ? (
+              <img
+                src={avatarSrc}
+                alt="Avatar"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <User className="h-12 w-12 text-gray-400" />
+            )}
           </div>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-primary border-2 border-[#0f1419] flex items-center justify-center hover:bg-primary/80 transition-colors disabled:opacity-50"
+          >
+            {uploading ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : (
+              <Camera className="h-4 w-4 text-white" />
+            )}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/jpg"
+            onChange={handleAvatarUpload}
+            className="hidden"
+          />
         </div>
         <h2 className="text-xl font-semibold text-white">
           {profile?.full_name || "User"}

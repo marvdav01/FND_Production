@@ -62,3 +62,46 @@ export async function assignCrew(req, res) {
   await pool.query('UPDATE crew SET status = ? WHERE id = ?', ['on_job', crewId])
   res.json({ success: true, message: 'Crew assigned' })
 }
+
+// Admin-only: Create crew member with login account
+export async function registerCrewAccount(req, res) {
+  const { name, email, password, role, phone } = req.body
+  if (!name || !email || !password) {
+    return res.status(400).json({ success: false, error: 'Name, email, and password are required' })
+  }
+
+  const bcrypt = (await import('bcryptjs')).default
+  const hashed = bcrypt.hashSync(password, 10)
+  const crewRole = role || 'Technician'
+  const connection = await pool.getConnection()
+
+  try {
+    await connection.beginTransaction()
+
+    // Create user account with role 'crew'
+    const [userResult] = await connection.query(
+      'INSERT INTO users (name, email, password, role, phone) VALUES (?, ?, ?, ?, ?)',
+      [name, email, hashed, 'crew', phone || null]
+    )
+
+    // Create crew record
+    const [crewResult] = await connection.query(
+      'INSERT INTO crew (name, role, phone) VALUES (?, ?, ?)',
+      [name, crewRole, phone || null]
+    )
+
+    await connection.commit()
+    res.status(201).json({
+      success: true,
+      data: { userId: userResult.insertId, crewId: crewResult.insertId }
+    })
+  } catch (error) {
+    await connection.rollback()
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ success: false, error: 'Email sudah terdaftar' })
+    }
+    res.status(500).json({ success: false, error: error.message })
+  } finally {
+    connection.release()
+  }
+}

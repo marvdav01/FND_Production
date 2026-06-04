@@ -1,7 +1,10 @@
 import { pool } from '../config/db.js'
-import ExcelJS from 'exceljs'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { createRequire } from 'module'
+const require = createRequire(import.meta.url)
+
+const ExcelJS = require('exceljs')
+const { jsPDF } = require('jspdf')
+const autoTable = require('jspdf-autotable').default || require('jspdf-autotable')
 
 export async function exportEventsExcel(req, res) {
   try {

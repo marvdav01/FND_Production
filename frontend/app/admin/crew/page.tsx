@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Search, Users, User, Phone, Edit, Trash2 } from "lucide-react"
+import { Plus, Search, Users, User, Phone, Mail, Lock, Edit, Trash2, UserPlus } from "lucide-react"
 import type { Profile, CrewAvailability } from "@/lib/types"
 
 const positions = [
@@ -39,13 +39,25 @@ export default function CrewPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [availabilityFilter, setAvailabilityFilter] = useState<string>("all")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<Profile | null>(null)
+  const [addError, setAddError] = useState("")
+  const [addLoading, setAddLoading] = useState(false)
+
   const [formData, setFormData] = useState({
     full_name: "",
     phone: "",
     position: "",
     availability: "tersedia" as CrewAvailability,
+  })
+
+  const [addFormData, setAddFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "Lighting Technician",
+    phone: "",
   })
 
   useEffect(() => {
@@ -82,7 +94,7 @@ export default function CrewPage() {
       (member.position || "").toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleEditSubmit(e: React.FormEvent) {
     e.preventDefault()
 
     if (editingItem) {
@@ -101,11 +113,48 @@ export default function CrewPage() {
 
         if (res.success) {
           fetchCrew()
-          closeDialog()
+          closeEditDialog()
         }
       } catch (error) {
         console.error("Error updating crew:", error)
       }
+    }
+  }
+
+  async function handleAddSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setAddLoading(true)
+    setAddError("")
+
+    try {
+      const res = await fetchAPI('/crew/register', {
+        method: 'POST',
+        body: JSON.stringify(addFormData)
+      })
+
+      if (res.success) {
+        fetchCrew()
+        closeAddDialog()
+      } else {
+        setAddError(res.error || "Gagal menambah crew")
+      }
+    } catch (error: any) {
+      setAddError(error.message || "Gagal menambah crew")
+    } finally {
+      setAddLoading(false)
+    }
+  }
+
+  async function handleDeleteCrew(id: string) {
+    if (!confirm("Apakah Anda yakin ingin menghapus crew ini?")) return
+
+    try {
+      const res = await fetchAPI(`/crew/${id}`, { method: 'DELETE' })
+      if (res.success) {
+        fetchCrew()
+      }
+    } catch (error) {
+      console.error("Error deleting crew:", error)
     }
   }
 
@@ -132,17 +181,29 @@ export default function CrewPage() {
       position: member.position || "",
       availability: member.availability || "tersedia",
     })
-    setIsDialogOpen(true)
+    setIsEditDialogOpen(true)
   }
 
-  function closeDialog() {
-    setIsDialogOpen(false)
+  function closeEditDialog() {
+    setIsEditDialogOpen(false)
     setEditingItem(null)
     setFormData({
       full_name: "",
       phone: "",
       position: "",
       availability: "tersedia",
+    })
+  }
+
+  function closeAddDialog() {
+    setIsAddDialogOpen(false)
+    setAddError("")
+    setAddFormData({
+      name: "",
+      email: "",
+      password: "",
+      role: "Lighting Technician",
+      phone: "",
     })
   }
 
@@ -158,31 +219,39 @@ export default function CrewPage() {
           <h1 className="text-2xl font-semibold text-foreground">Crew</h1>
           <p className="text-muted-foreground">Kelola tim dan operator</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+
+        {/* Add Crew Button */}
+        <Button className="bg-primary gap-2" onClick={() => setIsAddDialogOpen(true)}>
+          <UserPlus className="h-4 w-4" />
+          Tambah Crew
+        </Button>
+
+        {/* Edit Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Crew</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleEditSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="full_name">Nama Lengkap *</Label>
+                <Label htmlFor="edit_full_name">Nama Lengkap *</Label>
                 <Input
-                  id="full_name"
+                  id="edit_full_name"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">No. Telepon</Label>
+                <Label htmlFor="edit_phone">No. Telepon</Label>
                 <Input
-                  id="phone"
+                  id="edit_phone"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="position">Posisi *</Label>
+                <Label htmlFor="edit_position">Posisi *</Label>
                 <Select
                   value={formData.position}
                   onValueChange={(value) => setFormData({ ...formData, position: value })}
@@ -201,7 +270,7 @@ export default function CrewPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="availability">Status</Label>
+                <Label htmlFor="edit_availability">Status</Label>
                 <Select
                   value={formData.availability}
                   onValueChange={(value) =>
@@ -218,11 +287,134 @@ export default function CrewPage() {
                 </Select>
               </div>
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={closeDialog}>
+                <Button type="button" variant="outline" onClick={closeEditDialog}>
                   Batal
                 </Button>
                 <Button type="submit" className="bg-primary">
                   Update
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Crew Dialog */}
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserPlus className="h-5 w-5 text-primary" />
+                Tambah Anggota Crew Baru
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleAddSubmit} className="space-y-4">
+              {addError && (
+                <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
+                  {addError}
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="add_name">Nama Lengkap *</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="add_name"
+                    placeholder="Nama crew"
+                    value={addFormData.name}
+                    onChange={(e) => setAddFormData({ ...addFormData, name: e.target.value })}
+                    className="pl-9"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="add_email">Email Login *</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="add_email"
+                      type="email"
+                      placeholder="crew@email.com"
+                      value={addFormData.email}
+                      onChange={(e) => setAddFormData({ ...addFormData, email: e.target.value })}
+                      className="pl-9"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="add_password">Password *</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="add_password"
+                      type="password"
+                      placeholder="Min 6 karakter"
+                      value={addFormData.password}
+                      onChange={(e) => setAddFormData({ ...addFormData, password: e.target.value })}
+                      className="pl-9"
+                      minLength={6}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="add_role">Posisi *</Label>
+                  <Select
+                    value={addFormData.role}
+                    onValueChange={(value) => setAddFormData({ ...addFormData, role: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih posisi" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {positions.map((pos) => (
+                        <SelectItem key={pos} value={pos}>
+                          {pos}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="add_phone">No. Telepon</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="add_phone"
+                      type="tel"
+                      placeholder="0812..."
+                      value={addFormData.phone}
+                      onChange={(e) => setAddFormData({ ...addFormData, phone: e.target.value })}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
+                <p className="text-sm text-blue-700">
+                  💡 Akun login akan otomatis dibuat. Crew dapat login menggunakan email dan password yang Anda tentukan.
+                </p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={closeAddDialog}>
+                  Batal
+                </Button>
+                <Button type="submit" className="bg-primary gap-2" disabled={addLoading}>
+                  {addLoading ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="h-4 w-4" />
+                      Tambah Crew
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
@@ -310,8 +502,12 @@ export default function CrewPage() {
               <Users className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">Belum ada crew</h3>
               <p className="text-muted-foreground mt-1">
-                Crew akan muncul setelah mendaftar dengan role crew
+                Klik tombol &quot;Tambah Crew&quot; untuk menambahkan anggota baru
               </p>
+              <Button className="mt-4 bg-primary gap-2" onClick={() => setIsAddDialogOpen(true)}>
+                <UserPlus className="h-4 w-4" />
+                Tambah Crew Pertama
+              </Button>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -328,14 +524,24 @@ export default function CrewPage() {
                           <p className="text-sm text-muted-foreground">{member.position}</p>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => openEditDialog(member)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => openEditDialog(member)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteCrew(member.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between">
                       {member.phone && (

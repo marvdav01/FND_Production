@@ -5,9 +5,11 @@ import { fetchAPI } from "@/lib/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Calendar, MapPin, Clock, ChevronRight } from "lucide-react"
+import { ArrowLeft, Calendar, MapPin, Clock, ChevronRight, LogOut } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import type { Event } from "@/lib/types"
+import { logoutAction } from "@/lib/actions"
 
 const filters = ["Hari Ini", "Besok", "Minggu Ini"]
 
@@ -20,9 +22,18 @@ interface CrewEvent extends Event {
 }
 
 export default function CrewHomePage() {
+  const router = useRouter()
   const [events, setEvents] = useState<CrewEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState("Hari Ini")
+
+  async function handleLogout() {
+    if (confirm("Apakah Anda yakin ingin keluar?")) {
+      await logoutAction()
+      localStorage.removeItem('token')
+      router.push("/auth/login")
+    }
+  }
 
   useEffect(() => {
     fetchAssignments()
@@ -79,15 +90,20 @@ export default function CrewHomePage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pb-20">
       {/* Header */}
-      <header className="flex items-center gap-4 p-4 pt-12">
-        <Link href="/">
-          <Button variant="ghost" size="icon" className="text-white">
-            <ArrowLeft className="h-6 w-6" />
-          </Button>
-        </Link>
-        <h1 className="text-xl font-semibold text-white">Crew Saya</h1>
+      <header className="flex items-center justify-between p-4 pt-12">
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-bold text-white">Crew Saya</h1>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="text-red-400 hover:bg-red-500/10"
+          onClick={handleLogout}
+        >
+          <LogOut className="h-6 w-6" />
+        </Button>
       </header>
 
       {/* Filter Tabs */}

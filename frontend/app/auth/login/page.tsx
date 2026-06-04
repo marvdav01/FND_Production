@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { loginAction } from "@/lib/actions"
+import { Mail, Lock, LogIn, ArrowRight } from "lucide-react"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -42,7 +43,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-950">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-950 p-6">
       {/* Background Image with Overlay */}
       <div 
         className="absolute inset-0 z-0 opacity-40"
@@ -55,18 +56,18 @@ export default function LoginPage() {
       <div className="absolute inset-0 z-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent" />
 
       {/* Main Container */}
-      <div className="relative z-10 w-full max-w-md px-6 sm:px-4">
+      <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 text-center sm:mb-12">
           <div className="inline-flex items-center justify-center p-3 mb-6 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl">
             <span className="text-4xl font-black tracking-tighter text-primary">F</span>
             <span className="text-4xl font-black tracking-tighter text-white">ND</span>
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight sm:text-4xl">Selamat Datang</h1>
-          <p className="mt-2 text-slate-400">Masuk untuk mengelola event Anda</p>
+          <h1 className="text-4xl font-bold text-white tracking-tight">Selamat Datang</h1>
+          <p className="mt-2 text-slate-400">Masuk untuk akses sistem FND Production</p>
         </div>
 
-        <div className="bg-white/5 backdrop-blur-2xl border border-white/10 p-8 rounded-3xl shadow-2xl sm:bg-transparent sm:border-0 sm:p-0 sm:shadow-none">
-          <form action={handleSubmit} className="space-y-5">
+        <div className="bg-white/5 backdrop-blur-3xl border border-white/10 p-8 rounded-3xl shadow-2xl sm:p-10">
+          <form action={handleSubmit} className="space-y-6">
             {error && (
               <div className="p-4 text-sm text-red-200 bg-red-500/20 border border-red-500/50 rounded-xl animate-in fade-in zoom-in duration-300">
                 {error}
@@ -75,14 +76,17 @@ export default function LoginPage() {
             
             <div className="space-y-2">
               <Label htmlFor="email" className="text-slate-300 ml-1">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="nama@email.com"
-                required
-                className="h-14 px-5 bg-white/5 border-white/10 text-white placeholder:text-slate-500 rounded-2xl focus:ring-primary focus:border-primary transition-all"
-              />
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="nama@email.com"
+                  required
+                  className="h-13 pl-12 bg-white/5 border-white/10 text-white placeholder:text-slate-600 rounded-xl focus:ring-primary focus:border-primary transition-all"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -90,19 +94,22 @@ export default function LoginPage() {
                 <Label htmlFor="password" className="text-slate-300">Password</Label>
                 <Link href="#" className="text-xs text-primary hover:text-primary/80 transition-colors">Lupa Password?</Link>
               </div>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                required
-                className="h-14 px-5 bg-white/5 border-white/10 text-white placeholder:text-slate-500 rounded-2xl focus:ring-primary focus:border-primary transition-all"
-              />
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="••••••••"
+                  required
+                  className="h-13 pl-12 bg-white/5 border-white/10 text-white placeholder:text-slate-600 rounded-xl focus:ring-primary focus:border-primary transition-all"
+                />
+              </div>
             </div>
 
             <Button 
               type="submit" 
-              className="w-full h-14 text-lg font-bold bg-primary hover:bg-primary/90 text-white rounded-2xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98]" 
+              className="w-full h-14 text-lg font-bold bg-primary hover:bg-primary/90 text-white rounded-2xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98] group" 
               disabled={loading}
             >
               {loading ? (
@@ -110,7 +117,11 @@ export default function LoginPage() {
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   <span>Memproses...</span>
                 </div>
-              ) : "Masuk Sekarang"}
+              ) : (
+                <span className="flex items-center justify-center">
+                  Masuk Sekarang <LogIn className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </span>
+              )}
             </Button>
           </form>
 
@@ -118,7 +129,7 @@ export default function LoginPage() {
             <p className="text-slate-400 text-sm">
               Belum punya akun?{" "}
               <Link href="/auth/signup" className="text-primary font-bold hover:underline underline-offset-4">
-                Daftar Gratis
+                Daftar Gratis <ArrowRight className="inline h-4 w-4" />
               </Link>
             </p>
           </div>

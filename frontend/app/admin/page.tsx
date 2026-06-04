@@ -11,14 +11,22 @@ import { Calendar, DollarSign, Package, Users } from "lucide-react"
 import { EventStatus } from "@/lib/types"
 
 import { fetchAPI } from "@/lib/api"
+import { getSession } from "@/lib/session"
 
 async function getDashboardData() {
+  const token = await getSession()
+  if (!token) {
+    return { error: 'Unauthorized' }
+  }
+
   try {
+    const authHeader: Record<string, string> = { Authorization: `Bearer ${token}` }
+
     // Fetch data from Node.js backend
     const [eventsRes, equipmentRes, crewRes] = await Promise.all([
-      fetchAPI('/events'),
-      fetchAPI('/equipment'),
-      fetchAPI('/crew')
+      fetchAPI('/events', { headers: authHeader }),
+      fetchAPI('/equipment', { headers: authHeader }),
+      fetchAPI('/crew', { headers: authHeader })
     ]);
 
     const events = eventsRes.data || [];
@@ -113,11 +121,7 @@ async function getDashboardData() {
     };
   } catch (error: any) {
     console.error("Failed to fetch dashboard data:", error);
-    
-    if (error.message === 'Unauthorized') {
-      const { redirect } = await import('next/navigation');
-      redirect('/auth/login');
-    }
+    if (error.message === 'Unauthorized') return { error: 'Unauthorized' }
 
     // Return empty defaults if fetch fails
     return {
@@ -130,6 +134,14 @@ async function getDashboardData() {
 export default async function AdminDashboard() {
   const data = await getDashboardData()
 
+  if ('error' in data && data.error === 'Unauthorized') {
+    const { redirect } = await import('next/navigation')
+    redirect('/auth/login?expired=1')
+  }
+
+  // Cast to correct type for rendering
+  const dashboardData = data as any;
+
   return (
     <div className="min-h-screen">
       <AdminHeader title="Dashboard" subtitle="Welcome back, Administrator" />
@@ -139,7 +151,7 @@ export default async function AdminDashboard() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <StatsCard
             title="Total Event"
-            value={data.stats.totalEvents}
+            value={dashboardData.stats.totalEvents}
             change={{ value: 12, label: "dari bulan lalu", type: "increase" }}
             icon={Calendar}
             iconColor="text-primary"
@@ -147,7 +159,7 @@ export default async function AdminDashboard() {
           />
           <StatsCard
             title="Event Hari Ini"
-            value={data.stats.eventsToday}
+            value={dashboardData.stats.eventsToday}
             change={{ value: 7, label: "dari kemarin", type: "increase" }}
             icon={Calendar}
             iconColor="text-primary"
@@ -155,7 +167,7 @@ export default async function AdminDashboard() {
           />
           <StatsCard
             title="Total Revenue"
-            value={`Rp ${(data.stats.totalRevenue / 1000000).toFixed(0)}.000.000`}
+            value={`Rp ${(dashboardData.stats.totalRevenue / 1000000).toFixed(0)}.000.000`}
             change={{ value: 18, label: "dari bulan lalu", type: "increase" }}
             icon={DollarSign}
             iconColor="text-green-600"
@@ -163,16 +175,16 @@ export default async function AdminDashboard() {
           />
           <StatsCard
             title="Alat Tersedia"
-            value={data.stats.availableEquipment}
-            subtitle={`dari total ${data.stats.totalEquipment} unit`}
+            value={dashboardData.stats.availableEquipment}
+            subtitle={`dari total ${dashboardData.stats.totalEquipment} unit`}
             icon={Package}
             iconColor="text-blue-600"
             iconBgColor="bg-blue-100"
           />
           <StatsCard
             title="Crew Tersedia"
-            value={data.stats.availableCrew}
-            subtitle={`dari total ${data.stats.totalCrew} crew`}
+            value={dashboardData.stats.availableCrew}
+            subtitle={`dari total ${dashboardData.stats.totalCrew} crew`}
             icon={Users}
             iconColor="text-orange-600"
             iconBgColor="bg-orange-100"
@@ -182,23 +194,23 @@ export default async function AdminDashboard() {
         {/* Charts Row */}
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <EventsChart data={data.monthlyEvents} />
+            <EventsChart data={dashboardData.monthlyEvents} />
           </div>
-          <StatusChart data={data.eventsByStatus} total={data.stats.totalEvents} />
+          <StatusChart data={dashboardData.eventsByStatus} total={dashboardData.stats.totalEvents} />
         </div>
 
         {/* Upcoming Events */}
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <EventsTable events={data.recentEvents} />
+            <EventsTable events={dashboardData.recentEvents} />
           </div>
-          <UpcomingEvents events={data.upcomingEvents} />
+          <UpcomingEvents events={dashboardData.upcomingEvents} />
         </div>
 
         {/* Inventory and Crew Status */}
         <div className="mt-6 grid gap-6 md:grid-cols-2">
-          <InventoryStatus equipment={data.topEquipment} />
-          <CrewStatus crew={data.crewList} />
+          <InventoryStatus equipment={dashboardData.topEquipment} />
+          <CrewStatus crew={dashboardData.crewList} />
         </div>
 
         {/* Footer */}

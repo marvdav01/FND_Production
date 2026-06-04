@@ -9,21 +9,23 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     ...(options.headers as any || {}),
   };
 
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-  } else {
-    // Server-side
-    try {
-      const { getSession } = await import('./session');
-      const session = await getSession();
-      if (session) {
-        headers['Authorization'] = `Bearer ${session}`;
+  if (!headers['Authorization']) {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
-    } catch (e) {
-      console.error('Error getting session in fetchAPI:', e);
+    } else {
+      // Server-side
+      try {
+        const { getSession } = await import('./session');
+        const session = await getSession();
+        if (session) {
+          headers['Authorization'] = `Bearer ${session}`;
+        }
+      } catch (e) {
+        console.error('Error getting session in fetchAPI:', e);
+      }
     }
   }
 

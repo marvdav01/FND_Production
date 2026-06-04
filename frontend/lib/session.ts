@@ -16,7 +16,8 @@ export async function getSession() {
     const cookieStore = await cookies()
     const session = cookieStore.get('session')?.value
     return session
-  } catch (e) {
+  } catch (e: any) {
+    console.error('[getSession] Error:', e.message)
     return null
   }
 }

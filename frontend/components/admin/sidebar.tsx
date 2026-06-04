@@ -42,6 +42,8 @@ const menuItems = [
   { icon: Settings, label: "Settings", href: "/admin/settings" },
 ]
 
+import { API_BASE_URL } from "@/lib/api"
+
 export function AdminSidebar({ user: initialUser }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
@@ -49,6 +51,13 @@ export function AdminSidebar({ user: initialUser }: SidebarProps) {
 
   const handleLogout = async () => {
     await logout()
+  }
+
+  function getAvatarSrc(url: string | undefined): string | undefined {
+    if (!url) return undefined
+    if (url.startsWith('http')) return url
+    const backendBase = API_BASE_URL.replace('/api', '')
+    return `${backendBase}${url}`
   }
 
   return (
@@ -89,7 +98,7 @@ export function AdminSidebar({ user: initialUser }: SidebarProps) {
       <div className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3 mb-3">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={user?.avatar} />
+            <AvatarImage src={getAvatarSrc((user as any)?.avatar_url)} />
             <AvatarFallback className="bg-primary text-primary-foreground">
               {user?.name?.charAt(0) || "A"}
             </AvatarFallback>
@@ -115,3 +124,4 @@ export function AdminSidebar({ user: initialUser }: SidebarProps) {
     </aside>
   )
 }
+

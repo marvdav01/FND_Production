@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS crew (
   role VARCHAR(80) NOT NULL,
   phone VARCHAR(40),
   status ENUM('available','on_job') NOT NULL DEFAULT 'available',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_crew_status (status)
 );
 
 CREATE TABLE IF NOT EXISTS equipment (
@@ -25,7 +26,8 @@ CREATE TABLE IF NOT EXISTS equipment (
   name VARCHAR(140) NOT NULL,
   total_stock INT NOT NULL DEFAULT 0,
   available_stock INT NOT NULL DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_equipment_name (name)
 );
 
 CREATE TABLE IF NOT EXISTS events (
@@ -41,7 +43,9 @@ CREATE TABLE IF NOT EXISTS events (
   dp_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
   paid_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_events_status (status),
+  INDEX idx_events_client (client_id)
 );
 
 CREATE TABLE IF NOT EXISTS event_equipment (
@@ -70,11 +74,6 @@ CREATE TABLE IF NOT EXISTS payments (
   status ENUM('paid','unpaid') NOT NULL DEFAULT 'unpaid',
   proof_url VARCHAR(255),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+  INDEX idx_payments_status (status)
 );
-
-DROP INDEX IF EXISTS `idx_events_status`; CREATE INDEX idx_events_status ON events(status);
-DROP INDEX IF EXISTS `idx_events_client`; CREATE INDEX idx_events_client ON events(client_id);
-DROP INDEX IF EXISTS `idx_equipment_name`; CREATE INDEX idx_equipment_name ON equipment(name);
-DROP INDEX IF EXISTS `idx_crew_status`; CREATE INDEX idx_crew_status ON crew(status);
-DROP INDEX IF EXISTS `idx_payments_status`; CREATE INDEX idx_payments_status ON payments(status);

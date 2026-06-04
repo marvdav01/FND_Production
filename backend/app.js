@@ -32,6 +32,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, error: err.message || 'Server error' })
 })
 
-app.listen(port, () => {
-  console.log(`Backend running on http://localhost:${port}`)
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Backend running on:`)
+  console.log(`- Local: http://localhost:${port}`)
+  console.log(`- Network: http://192.168.18.17:${port}`)
 })

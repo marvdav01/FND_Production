@@ -9,6 +9,7 @@ export interface User {
   email: string;
   role: 'admin' | 'client' | 'crew';
   avatar?: string;
+  avatar_url?: string;
   phone?: string;
 }
 

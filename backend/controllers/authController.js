@@ -34,8 +34,8 @@ export async function signup(req, res) {
     return res.status(400).json({ success: false, error: 'Name, email and password are required' })
   }
 
-  // Validate role, default to client
-  const validRole = ['client', 'crew'].includes(role) ? role : 'client'
+  // Public signup only allows 'client' role. Crew accounts are created by admin.
+  const validRole = 'client'
 
   const hashed = bcrypt.hashSync(password, 10)
   const connection = await pool.getConnection()
@@ -49,14 +49,6 @@ export async function signup(req, res) {
     )
     
     const userId = result.insertId
-    
-    // If registered as crew, also add to crew table for assignment
-    if (validRole === 'crew') {
-      await connection.query(
-        'INSERT INTO crew (name, role, phone) VALUES (?, ?, ?)',
-        [name, 'Support', req.body.phone || null]
-      )
-    }
     
     await connection.commit()
     res.status(201).json({ success: true, data: { userId, email } })
@@ -72,7 +64,51 @@ export async function signup(req, res) {
 }
 
 export async function profile(req, res) {
-  res.json({ success: true, data: req.user })
+  try {
+    const [rows] = await pool.query(
+      'SELECT id, name, email, role, phone, avatar_url FROM users WHERE id = ?',
+      [req.user.id]
+    )
+    if (!rows[0]) return res.status(404).json({ success: false, error: 'User not found' })
+    res.json({ success: true, data: rows[0] })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+}
+
+export async function updateProfile(req, res) {
+  const { name, phone } = req.body
+  try {
+    await pool.query(
+      'UPDATE users SET name = COALESCE(?, name), phone = COALESCE(?, phone) WHERE id = ?',
+      [name || null, phone || null, req.user.id]
+    )
+    const [rows] = await pool.query(
+      'SELECT id, name, email, role, phone, avatar_url FROM users WHERE id = ?',
+      [req.user.id]
+    )
+    res.json({ success: true, data: rows[0] })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+}
+
+export async function uploadAvatar(req, res) {
+  if (!req.file) {
+    return res.status(400).json({ success: false, error: 'No file uploaded' })
+  }
+  
+  const avatarUrl = `/uploads/${req.file.filename}`
+  try {
+    await pool.query('UPDATE users SET avatar_url = ? WHERE id = ?', [avatarUrl, req.user.id])
+    const [rows] = await pool.query(
+      'SELECT id, name, email, role, phone, avatar_url FROM users WHERE id = ?',
+      [req.user.id]
+    )
+    res.json({ success: true, data: rows[0] })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
 }
 export async function getUsers(req, res) {
   const { role } = req.query

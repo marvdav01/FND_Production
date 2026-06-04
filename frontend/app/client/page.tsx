@@ -5,9 +5,11 @@ import { fetchAPI } from "@/lib/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Bell, Menu, Calendar, MapPin, ArrowRight, ChevronRight } from "lucide-react"
+import { Bell, Menu, Calendar, MapPin, ArrowRight, ChevronRight, LogOut } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import type { Event, EventStatus } from "@/lib/types"
+import { logoutAction } from "@/lib/actions"
 
 const statusColors: Record<EventStatus, string> = {
   pending: "bg-gray-700 text-gray-300",
@@ -19,6 +21,7 @@ const statusColors: Record<EventStatus, string> = {
 }
 
 export default function ClientHomePage() {
+  const router = useRouter()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [userName, setUserName] = useState("Edisyah")
@@ -26,6 +29,14 @@ export default function ClientHomePage() {
   useEffect(() => {
     fetchEvents()
   }, [])
+
+  async function handleLogout() {
+    if (confirm("Apakah Anda yakin ingin keluar?")) {
+      await logoutAction()
+      localStorage.removeItem('token')
+      router.push("/auth/login")
+    }
+  }
 
   async function fetchEvents() {
     setLoading(true)
@@ -60,25 +71,32 @@ export default function ClientHomePage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pb-20">
       {/* Header */}
       <header className="flex items-center justify-between p-4 pt-12 pb-6">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
-            <Menu className="h-6 w-6" />
-          </Button>
           <div className="flex items-center gap-2">
             <span className="text-xl font-bold text-primary">F</span>
             <span className="text-xl font-bold text-white">ND</span>
             <span className="text-sm text-gray-400">Production</span>
           </div>
         </div>
-        <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10">
-          <Bell className="h-6 w-6" />
-          <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-xs flex items-center justify-center font-medium">
-            3
-          </span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10">
+            <Bell className="h-6 w-6" />
+            <span className="absolute top-0 right-0 h-4 w-4 rounded-full bg-primary text-[10px] flex items-center justify-center font-bold">
+              3
+            </span>
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-red-400 hover:bg-red-500/10"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-6 w-6" />
+          </Button>
+        </div>
       </header>
 
       {/* Welcome */}

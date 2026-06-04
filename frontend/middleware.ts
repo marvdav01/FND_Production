@@ -16,10 +16,17 @@ function decodeJWT(token: string) {
     return null
   }
 }
-
 export function middleware(request: NextRequest) {
-  const session = request.cookies.get('session')?.value
   const { pathname } = request.nextUrl
+  if (request.nextUrl.searchParams.get('expired') === '1') {
+    const response = pathname.startsWith('/auth') 
+      ? NextResponse.next() 
+      : NextResponse.redirect(new URL('/auth/login', request.url))
+    response.cookies.delete('session')
+    return response
+  }
+
+  const session = request.cookies.get('session')?.value
 
   const isAuthRoute = pathname.startsWith('/auth')
   const isAdminRoute = pathname.startsWith('/admin')
@@ -35,6 +42,12 @@ export function middleware(request: NextRequest) {
   if (session) {
     const payload = decodeJWT(session)
     const role = payload?.role
+
+    if (!payload || !role || !['admin', 'client', 'crew'].includes(role)) {
+      const response = NextResponse.redirect(new URL('/auth/login', request.url))
+      response.cookies.delete('session')
+      return response
+    }
 
     // Redirect logged-in users away from auth routes
     if (isAuthRoute) {
