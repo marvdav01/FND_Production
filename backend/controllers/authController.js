@@ -13,19 +13,24 @@ export async function login(req, res) {
     return res.status(400).json({ success: false, error: 'Email and password are required' })
   }
 
-  const [rows] = await pool.query('SELECT id, name, email, password, role FROM users WHERE email = ?', [email])
-  const user = rows[0]
-  if (!user) {
-    return res.status(401).json({ success: false, error: 'Invalid credentials' })
-  }
+  try {
+    const [rows] = await pool.query('SELECT id, name, email, password, role FROM users WHERE email = ?', [email])
+    const user = rows[0]
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' })
+    }
 
-  const matched = bcrypt.compareSync(password, user.password)
-  if (!matched) {
-    return res.status(401).json({ success: false, error: 'Invalid credentials' })
-  }
+    const matched = bcrypt.compareSync(password, user.password)
+    if (!matched) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' })
+    }
 
-  const token = jwt.sign({ id: user.id, email: user.email, role: user.role, name: user.name }, secret, { expiresIn })
-  res.json({ success: true, data: { token, user: { id: user.id, name: user.name, email: user.email, role: user.role } } })
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role, name: user.name }, secret, { expiresIn })
+    res.json({ success: true, data: { token, user: { id: user.id, name: user.name, email: user.email, role: user.role } } })
+  } catch (error) {
+    console.error('[login] Error:', error.message || error)
+    res.status(500).json({ success: false, error: 'Login failed due to server error' })
+  }
 }
 
 export async function signup(req, res) {
