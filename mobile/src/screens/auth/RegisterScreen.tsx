@@ -8,16 +8,10 @@ import { api } from '../../services/api';
 export const RegisterScreen = ({ navigation }: any) => {
   const { control, handleSubmit, formState: { errors }, watch } = useForm();
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<'CLIENT' | 'CREW'>('CLIENT');
 
   const password = watch('password');
 
   const onSubmit = async (data: any) => {
-    if (selectedRole === 'CREW') {
-      Alert.alert('Registrasi Crew', 'Akun crew harus dibuat oleh admin.');
-      return;
-    }
-
     setIsLoading(true);
     try {
       const response = await api.post('/auth/signup', {
@@ -28,12 +22,25 @@ export const RegisterScreen = ({ navigation }: any) => {
 
       if (response.data?.success) {
         Alert.alert('Berhasil', 'Akun client berhasil dibuat. Silakan login.');
-        navigation.navigate('Login');
+        navigation.navigate('Login', { email: data.email });
       } else {
         throw new Error(response.data?.error || 'Registrasi gagal');
       }
     } catch (error: any) {
-      Alert.alert('Registrasi Error', error.response?.data?.error || error.message || 'Terjadi kesalahan');
+      const isNetworkError = !error.response && (error.code === 'ERR_NETWORK' || error.message === 'Network Error');
+      if (isNetworkError) {
+        Alert.alert(
+          'Koneksi Gagal',
+          'Tidak dapat terhubung ke server. Pastikan HP dan PC Anda berada di jaringan Wi-Fi yang sama, lalu coba lagi.'
+        );
+      } else {
+        const msg = error.response?.data?.error || error.message || 'Terjadi kesalahan';
+        const isEmailTaken = msg.toLowerCase().includes('already exists') || msg.toLowerCase().includes('already registered');
+        Alert.alert(
+          isEmailTaken ? 'Email Sudah Terdaftar' : 'Registrasi Gagal',
+          isEmailTaken ? 'Email ini sudah digunakan. Gunakan email lain atau langsung login.' : msg
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -127,28 +134,12 @@ export const RegisterScreen = ({ navigation }: any) => {
           name="confirmPassword"
         />
 
-        <Text className="text-[#1E293B] font-semibold mb-2 mt-2">Mendaftar Sebagai</Text>
-        <View className="flex-row mb-8">
-          <TouchableOpacity 
-            className={`flex-1 py-3 mr-2 items-center rounded-xl border ${selectedRole === 'CLIENT' ? 'bg-[#2563EB] border-[#2563EB]' : 'bg-white border-gray-200'}`}
-            onPress={() => setSelectedRole('CLIENT')}
-          >
-            <Text className={`font-semibold ${selectedRole === 'CLIENT' ? 'text-white' : 'text-gray-500'}`}>Client</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            className={`flex-1 py-3 ml-2 items-center rounded-xl border ${selectedRole === 'CREW' ? 'bg-[#2563EB] border-[#2563EB]' : 'bg-white border-gray-200'}`}
-            onPress={() => setSelectedRole('CREW')}
-          >
-            <Text className={`font-semibold ${selectedRole === 'CREW' ? 'text-white' : 'text-gray-500'}`}>Crew</Text>
-          </TouchableOpacity>
-        </View>
-
         <Button 
           title="Daftar" 
           onPress={handleSubmit(onSubmit)} 
-          isLoading={isLoading} 
-          className="mb-4"
+          isLoading={isLoading}
+          disabled={isLoading} 
+          className="mb-4 mt-4"
         />
 
         <View className="flex-row justify-center mt-2 mb-10">

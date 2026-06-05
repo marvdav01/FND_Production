@@ -3,7 +3,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-16.2.4-black?logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-blue?logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue)](https://www.typescriptlang.org/)
-[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-green?logo=supabase)](https://supabase.com/)
+[![MySQL](https://img.shields.io/badge/MySQL-Database-blue?logo=mysql)](https://www.mysql.com/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.2.0-38bdf8?logo=tailwindcss)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -19,7 +19,7 @@
 - **Equipment:** 520+ items tracked
 - **Crew:** 35+ team members
 - **Clients:** 50+ active clients
-- **Tech Stack:** Next.js + Supabase + Tailwind CSS
+- **Tech Stack:** Next.js + Express + MySQL + Tailwind CSS
 
 ## 🏗️ Architecture
 
@@ -35,7 +35,7 @@
 └──────────────┬──────────────────────────┘
                │
 ┌──────────────▼──────────────────────────┐
-│   Backend Layer (Supabase PostgreSQL)   │
+│   Backend Layer (Express + MySQL)       │
 │  8 Tables with Relations & Constraints  │
 └─────────────────────────────────────────┘
 ```
@@ -46,9 +46,9 @@
 |-------|-----------|---------|
 | **Frontend** | Next.js 16 + React 19 | Server and Client Components |
 | **Styling** | Tailwind CSS + shadcn/ui | 40+ Pre-built Components |
-| **Backend** | Next.js API Routes | RESTful API |
-| **Database** | Supabase PostgreSQL | 8 Relational Tables |
-| **Auth** | Supabase Auth | JWT + Email/Password |
+| **Backend** | Express.js Server | RESTful API |
+| **Database** | MySQL Database | 8 Relational Tables |
+| **Auth** | JWT Authentication | Token-based Auth + Email/Password |
 | **Charts** | Recharts | Real-time Analytics |
 
 ## ✨ Features
@@ -82,19 +82,17 @@
 
 ### 🔐 Security Features
 
-- **Role-Based Access Control:** 3 roles (Admin, Client, Crew)
 - **JWT Authentication:** Secure token-based auth
-- **Supabase Auth:** Email/password dengan session management
 - **Protected Routes:** Middleware validation pada setiap request
-- **Database Constraints:** Foreign keys, unique constraints, NOT NULL
+- **Database Constraints:** Foreign keys, unique constraints, NOT NULL (MySQL)
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
 - Node.js >= 18.0.0
-- pnpm >= 8.0.0 (atau npm)
-- Supabase account (free tier available)
+- npm >= 9.0.0 (atau pnpm)
+- MySQL Server >= 8.0
 
 ### Installation
 
@@ -107,8 +105,8 @@ cd FND_Production
 pnpm install
 
 # 3. Setup environment variables
-cp .env.example .env.local
-# Edit .env.local dan add Supabase credentials
+# Copy dan sesuaikan `.env` di folder backend dari `.env.example`
+# Edit config database MySQL Anda di backend/.env
 
 # 4. Start development server
 pnpm dev
@@ -146,7 +144,6 @@ FND_Production/
 │   ├── /admin                    # Admin-specific components
 │   └── /ui                       # shadcn/ui components
 ├── /lib                          # Utilities
-│   ├── /supabase                 # Supabase clients
 │   ├── types.ts                  # TypeScript types
 │   └── utils.ts                  # Helper functions
 ├── /public                       # Static assets
@@ -239,7 +236,7 @@ GET/POST/PATCH      /api/payments       # Payment management
 | Client | client@fnd.com | password123 |
 | Crew | crew@fnd.com | password123 |
 
-*Create these users via Supabase Auth first*
+*Jalankan database/seed.js untuk memasukkan akun demo ini ke MySQL*
 
 ### Test Workflows
 
@@ -277,8 +274,8 @@ git push origin main
 **Production URL:** https://fnd-production.vercel.app
 
 **Environment Setup:**
-- Add Supabase credentials pada Vercel project settings
-- Database auto-created dalam Supabase
+- Konfigurasi environment variables untuk database MySQL Anda di production (backend/.env)
+- Jalankan schema.sql di database MySQL production Anda
 
 ### Docker (Optional)
 
@@ -326,7 +323,7 @@ pnpm lint     # Run ESLint
 - ✅ Database constraints enforcement
 - ✅ Input validation (Zod schemas)
 - ✅ HTTPS enforced in production
-- ✅ Secure password hashing (Supabase)
+- ✅ Secure password hashing (bcrypt)
 - ✅ CORS configured
 
 ## 📈 Performance
@@ -342,17 +339,14 @@ pnpm lint     # Run ESLint
 
 ### Common Issues
 
-**Q: "Supabase credentials not configured"**
-- A: Check `.env.local` file dengan Supabase credentials
+**Q: "Database connection error"**
+- A: Pastikan MySQL Server Anda berjalan dan port 3306 terbuka. Periksa juga konfigurasi credentials di `backend/.env`.
 
-**Q: "Port 3000 already in use"**
-- A: Kill existing process: `lsof -ti:3000 | xargs kill -9`
-
-**Q: Database connection error**
-- A: Verify internet, check Supabase project active, verify API keys
+**Q: "Port 3000/4000 already in use"**
+- A: Kill existing process yang menggunakan port 3000/4000.
 
 **Q: Build error**
-- A: Clear cache: `rm -rf .next node_modules && pnpm install`
+- A: Clear cache: `rm -rf .next node_modules && npm install`
 
 ## 🤝 Contributing
 
@@ -387,7 +381,7 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file.
 ## 🔗 Useful Links
 
 - [Next.js Docs](https://nextjs.org/docs)
-- [Supabase Docs](https://supabase.com/docs)
+- [MySQL Docs](https://dev.mysql.com/doc/)
 - [shadcn/ui](https://ui.shadcn.com/)
 - [Tailwind CSS](https://tailwindcss.com/)
 - [React Hook Form](https://react-hook-form.com/)

@@ -1,7 +1,12 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import fs from 'fs'
+import path from 'path'
 import { pool } from '../config/db.js'
 import dotenv from 'dotenv'
+
+// Alias untuk fs sync (digunakan di uploadAvatarBase64)
+const fsSync = fs
 
 dotenv.config()
 const secret = process.env.JWT_SECRET || 'supersecretkey'
@@ -13,7 +18,7 @@ export async function login(req, res) {
     return res.status(400).json({ success: false, error: 'Email and password are required' })
   }
 
-  const [rows] = await pool.query('SELECT id, name, email, password, role FROM users WHERE email = ?', [email])
+  const [rows] = await pool.query('SELECT id, name, email, password, role, phone, avatar_url FROM users WHERE email = ?', [email])
   const user = rows[0]
   if (!user) {
     return res.status(401).json({ success: false, error: 'Invalid credentials' })
@@ -25,7 +30,7 @@ export async function login(req, res) {
   }
 
   const token = jwt.sign({ id: user.id, email: user.email, role: user.role, name: user.name }, secret, { expiresIn })
-  res.json({ success: true, data: { token, user: { id: user.id, name: user.name, email: user.email, role: user.role } } })
+  res.json({ success: true, data: { token, user: { id: user.id, name: user.name, email: user.email, role: user.role, phone: user.phone, avatar_url: user.avatar_url } } })
 }
 
 export async function signup(req, res) {
@@ -35,6 +40,9 @@ export async function signup(req, res) {
   }
 
   // Public signup only allows 'client' role. Crew accounts are created by admin.
+  if (role === 'crew' || role === 'admin') {
+    return res.status(400).json({ success: false, error: 'Registrasi akun crew/admin hanya dapat ditambahkan oleh admin' })
+  }
   const validRole = 'client'
 
   const hashed = bcrypt.hashSync(password, 10)
@@ -94,6 +102,9 @@ export async function updateProfile(req, res) {
 }
 
 export async function uploadAvatar(req, res) {
+  console.log('[Avatar] Content-Type:', req.headers['content-type'])
+  console.log('[Avatar] req.file:', req.file)
+  
   if (!req.file) {
     return res.status(400).json({ success: false, error: 'No file uploaded' })
   }
@@ -107,6 +118,51 @@ export async function uploadAvatar(req, res) {
     )
     res.json({ success: true, data: rows[0] })
   } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+}
+
+// Upload avatar via Base64 JSON - lebih reliable untuk React Native
+export async function uploadAvatarBase64(req, res) {
+  const { image, mimeType } = req.body
+  if (!image) {
+    return res.status(400).json({ success: false, error: 'No image data provided' })
+  }
+
+  try {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    const mime = mimeType || 'image/jpeg'
+    if (!allowedTypes.includes(mime)) {
+      return res.status(400).json({ success: false, error: 'Format file tidak didukung' })
+    }
+
+    // Tentukan ekstensi file
+    const extMap = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+    const ext = extMap[mime] || 'jpg'
+    const filename = `avatar-${req.user.id}-${Date.now()}.${ext}`
+    const uploadDir = 'uploads/'
+
+    if (!fsSync.existsSync(uploadDir)) {
+      fsSync.mkdirSync(uploadDir, { recursive: true })
+    }
+
+    // Decode base64 dan simpan file
+    const base64Data = image.replace(/^data:image\/\w+;base64,/, '')
+    const buffer = Buffer.from(base64Data, 'base64')
+    const filepath = path.join(uploadDir, filename)
+    fsSync.writeFileSync(filepath, buffer)
+
+    const avatarUrl = `/uploads/${filename}`
+    await pool.query('UPDATE users SET avatar_url = ? WHERE id = ?', [avatarUrl, req.user.id])
+    const [rows] = await pool.query(
+      'SELECT id, name, email, role, phone, avatar_url FROM users WHERE id = ?',
+      [req.user.id]
+    )
+
+    console.log('[Avatar Base64] Upload berhasil:', avatarUrl)
+    res.json({ success: true, data: rows[0] })
+  } catch (error) {
+    console.error('[Avatar Base64] Error:', error)
     res.status(500).json({ success: false, error: error.message })
   }
 }

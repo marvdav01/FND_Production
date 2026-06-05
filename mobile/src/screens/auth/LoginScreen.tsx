@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { useDispatch } from 'react-redux';
@@ -8,10 +8,16 @@ import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { api } from '../../services/api';
 
-export const LoginScreen = ({ navigation }: any) => {
-  const { control, handleSubmit, formState: { errors } } = useForm();
+export const LoginScreen = ({ navigation, route }: any) => {
+  const { control, handleSubmit, setValue, formState: { errors } } = useForm();
   const dispatch = useDispatch();
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (route?.params?.email) {
+      setValue('email', route.params.email);
+    }
+  }, [route?.params?.email]);
 
   const onSubmit = async (data: any) => {
     setIsLoading(true);
@@ -30,11 +36,28 @@ export const LoginScreen = ({ navigation }: any) => {
         throw new Error('Login gagal, coba lagi.');
       }
 
-      const role: User['role'] = user.role === 'crew' ? 'CREW' : 'CLIENT';
+      const role: User['role'] = user.role === 'crew' ? 'CREW' : user.role === 'admin' ? 'ADMIN' : 'CLIENT';
       await AsyncStorage.setItem('token', token);
-      dispatch(loginSuccess({ user: { id: String(user.id), name: user.name, email: user.email, role }, token }));
+      dispatch(loginSuccess({ 
+        user: { 
+          id: String(user.id), 
+          name: user.name, 
+          email: user.email, 
+          role,
+          phone: user.phone || undefined,
+          avatar_url: user.avatar_url || undefined,
+        }, 
+        token 
+      }));
     } catch (error: any) {
-      Alert.alert('Login Error', error.response?.data?.error || error.message || 'Terjadi kesalahan');
+      const isNetworkError = !error.response && (error.code === 'ERR_NETWORK' || error.message === 'Network Error');
+      if (isNetworkError) {
+        Alert.alert('Koneksi Gagal', 'Tidak dapat terhubung ke server. Pastikan HP dan PC Anda berada di jaringan Wi-Fi yang sama, lalu coba lagi.');
+      } else {
+        const msg = error.response?.data?.error || error.message || 'Terjadi kesalahan';
+        const isInvalidCreds = msg.toLowerCase().includes('invalid credentials') || msg.toLowerCase().includes('not found');
+        Alert.alert('Login Gagal', isInvalidCreds ? 'Email atau password salah. Silakan coba lagi.' : msg);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -100,6 +123,7 @@ export const LoginScreen = ({ navigation }: any) => {
           title="Masuk" 
           onPress={handleSubmit(onSubmit)} 
           isLoading={isLoading} 
+          disabled={isLoading}
           className="mb-4 mt-2"
         />
 

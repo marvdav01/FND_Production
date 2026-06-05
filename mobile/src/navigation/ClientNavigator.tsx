@@ -12,15 +12,33 @@ import { InvoiceScreen } from '../screens/client/InvoiceScreen';
 import { ProfileClientScreen } from '../screens/client/ProfileClientScreen';
 import { LayananScreen } from '../screens/client/LayananScreen';
 import { NotifikasiClientScreen } from '../screens/client/NotifikasiClientScreen';
+import { EditProfileScreen } from '../screens/client/EditProfileScreen';
 
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 const EventStack = createNativeStackNavigator();
+const ProfileStack = createNativeStackNavigator();
+
+// Beranda Stack to handle Client Dashboard and Notifications
+const BerandaStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="BerandaHome" component={ClientDashboardScreen} />
+    <Stack.Screen name="Notifikasi" component={NotifikasiClientScreen} />
+  </Stack.Navigator>
+);
 
 const EventStackNavigator = () => (
   <EventStack.Navigator screenOptions={{ headerShown: false }}>
     <EventStack.Screen name="EventSayaList" component={EventSayaScreen} />
     <EventStack.Screen name="DetailEventClient" component={DetailEventClientScreen} />
   </EventStack.Navigator>
+);
+
+const ProfileStackNavigator = () => (
+  <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+    <ProfileStack.Screen name="ProfileMain" component={ProfileClientScreen} />
+    <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} />
+  </ProfileStack.Navigator>
 );
 
 export const ClientNavigator = () => {
@@ -62,12 +80,12 @@ export const ClientNavigator = () => {
         },
       })}
     >
-      <Tab.Screen name="Beranda" component={ClientDashboardScreen} />
+      <Tab.Screen name="Beranda" component={BerandaStack} />
       <Tab.Screen name="Layanan" component={LayananScreen} />
       <Tab.Screen name="Booking" component={BookingScreen} />
       <Tab.Screen name="EventSaya" component={EventStackNavigator} options={{ title: 'Event Saya' }} />
       <Tab.Screen name="Invoice" component={InvoiceScreen} />
-      <Tab.Screen name="Profil" component={ProfileClientScreen} />
+      <Tab.Screen name="Profil" component={ProfileStackNavigator} />
     </Tab.Navigator>
   );
 };

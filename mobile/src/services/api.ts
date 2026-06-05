@@ -1,9 +1,27 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 // Gunakan Base URL backend admin/dashboard.
-// Untuk emulator Android gunakan 10.0.2.2, untuk iOS simulator bisa pakai localhost.
-const BASE_URL = 'http://10.0.2.2:4000/api';
+const getBaseUrl = () => {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  
+  // IP Fallback saat EXPO_PUBLIC_API_URL belum diset (khusus local testing)
+  const LOCAL_IP = '192.168.18.14';
+
+  if (Platform.OS === 'web') {
+    // Versi web di browser PC
+    return 'http://localhost:4000/api';
+  } else {
+    // Android/iOS — baik emulator maupun HP fisik via Expo Go
+    return `http://${LOCAL_IP}:4000/api`;
+  }
+};
+
+const BASE_URL = getBaseUrl();
+console.log(`[API] Connected to API`);
 
 export const api = axios.create({
   baseURL: BASE_URL,
