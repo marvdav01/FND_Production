@@ -1,38 +1,47 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "/api/proxy"
 
-export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
-  const isServer = typeof window === 'undefined'
+export const BACKEND_API_URL =
+  process.env.BACKEND_API_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://127.0.0.1:4000/api"
 
-  // On server, make sure we use an absolute URL so Node's fetch works correctly.
-  const serverBase = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000/api'
-  const clientBase = process.env.NEXT_PUBLIC_API_URL || '/api'
-  const base = isServer ? serverBase : clientBase
+export function getAssetUrl(url?: string | null) {
+  if (!url) return undefined
+  if (url.startsWith("http")) return url
+  if (url.startsWith("/uploads/")) {
+    const assetBase =
+      process.env.NEXT_PUBLIC_ASSET_URL ||
+      (process.env.NEXT_PUBLIC_API_URL?.startsWith("http")
+        ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "")
+        : "")
 
+    return `${assetBase}${url}`
+  }
+
+  return url
+}
+
+export async function fetchAPI<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const isServer = typeof window === "undefined"
+  const base = isServer ? BACKEND_API_URL : API_BASE_URL
   const url = `${base}${endpoint}`
-  
-  const isFormData = options.body instanceof FormData;
-  const headers: Record<string, string> = {
-    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-    ...(options.headers as any || {}),
-  };
+  const isFormData = options.body instanceof FormData
 
-  if (!headers['Authorization']) {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token');
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+  const headers: Record<string, string> = {
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...((options.headers as Record<string, string>) || {}),
+  }
+
+  if (isServer && !headers.Authorization) {
+    try {
+      const { getSession } = await import("./session")
+      const session = await getSession()
+      if (session) {
+        headers.Authorization = `Bearer ${session}`
       }
-    } else {
-      // Server-side: try to read session cookie (set by server-side helpers)
-      try {
-        const { getSession } = await import('./session');
-        const session = await getSession();
-        if (session) {
-          headers['Authorization'] = `Bearer ${session}`;
-        }
-      } catch (e) {
-        console.error('Error getting session in fetchAPI:', e);
-      }
+    } catch {
+      // Server actions without a request context can still call public endpoints.
     }
   }
 
@@ -41,25 +50,23 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     response = await fetch(url, {
       ...options,
       headers,
+      cache: options.cache ?? "no-store",
     })
-  } catch (err: any) {
-    console.error('[fetchAPI] Fetch error:', err?.message || err)
-    throw new Error('Terjadi kesalahan pada server')
+  } catch {
+    throw new Error("Tidak dapat terhubung ke server API")
   }
 
-  let data;
-  try {
-    data = await response.json();
-  } catch (e) {
-    data = {};
-  }
+  const contentType = response.headers.get("content-type") || ""
+  const data = contentType.includes("application/json")
+    ? await response.json().catch(() => ({}))
+    : await response.blob().catch(() => ({}))
 
   if (!response.ok) {
-    const err: any = new Error(data.error || 'Terjadi kesalahan pada server')
+    const err: any = new Error((data as any)?.error || "Terjadi kesalahan pada server")
     err.status = response.status
     err.data = data
     throw err
   }
 
-  return data;
+  return data as T
 }

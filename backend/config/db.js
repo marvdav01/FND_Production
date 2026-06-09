@@ -28,6 +28,9 @@ async function createDatabasePool() {
     connection.release()
     return candidate
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') {
+      throw err
+    }
     console.warn('Failed to connect to MySQL, using mock database:', err.message)
     try {
       await candidate.end()
@@ -39,6 +42,9 @@ async function createDatabasePool() {
 try {
   pool = await createDatabasePool()
 } catch (err) {
+  if (process.env.NODE_ENV === 'production') {
+    throw err
+  }
   console.warn('Failed to initialize database pool, using mock database:', err.message)
   pool = mockPool
 }

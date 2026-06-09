@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { fetchAPI } from "@/lib/api"
+import { fetchAPI, getAssetUrl } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -386,7 +386,7 @@ export default function FinancePage() {
                   <Label>Bukti Transfer</Label>
                   <div className="border rounded-lg p-2">
                     <img
-                      src={selectedPayment.proof_url}
+                      src={getAssetUrl(selectedPayment.proof_url)}
                       alt="Bukti Transfer"
                       className="w-full rounded"
                     />

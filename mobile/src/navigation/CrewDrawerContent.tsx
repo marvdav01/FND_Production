@@ -6,12 +6,20 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootState } from '../store';
-import { api } from '../services/api';
+import { api, getAssetUrl } from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const CrewDrawerContent = (props: any) => {
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.auth.user);
   const insets = useSafeAreaInsets();
+  const avatarUrl = getAssetUrl(user?.avatar_url);
+
+  const handleLogout = async () => {
+    const refreshToken = await AsyncStorage.getItem('refreshToken');
+    await api.post('/auth/logout', { refreshToken }).catch(() => null);
+    dispatch(logout());
+  };
   
   const menuItems = [
     { name: 'Beranda', icon: 'home-outline', route: 'BerandaTab' },
@@ -40,9 +48,9 @@ export const CrewDrawerContent = (props: any) => {
           </View>
           
           <View className="flex-row items-center">
-            {user?.avatar_url ? (
+            {avatarUrl ? (
               <Image 
-                source={{ uri: user.avatar_url.startsWith('http') ? user.avatar_url : `${(api.defaults.baseURL || 'http://192.168.18.14:4000/api').replace('/api', '')}${user.avatar_url}` }} 
+                source={{ uri: avatarUrl }} 
                 className="w-14 h-14 rounded-full border-2 border-accent"
               />
             ) : (
@@ -94,7 +102,7 @@ export const CrewDrawerContent = (props: any) => {
           
           <TouchableOpacity 
             className="flex-row items-center px-4 py-3.5 mt-2"
-            onPress={() => dispatch(logout())}
+            onPress={handleLogout}
           >
             <Ionicons name="log-out-outline" size={22} color="#94A3B8" />
             <Text className="ml-4 text-base text-slate-400 font-medium">Keluar</Text>

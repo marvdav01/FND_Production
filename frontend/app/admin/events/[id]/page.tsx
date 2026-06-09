@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, use } from "react"
-import { fetchAPI } from "@/lib/api"
+import { fetchAPI, getAssetUrl } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -77,7 +77,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           crew: { full_name: c.name, position: c.role }
         })) || [])
         
-        setPayments(e.payments || [])
+        setPayments((e.payments || []).map((payment: any) => ({
+          ...payment,
+          status: payment.status === "paid" ? "lunas" : "belum_lunas",
+        })))
       }
     } catch (error) {
       console.error("Error fetching event details:", error)
@@ -430,7 +433,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                               variant="link"
                               size="sm"
                               className="h-auto p-0 text-xs text-primary"
-                              onClick={() => window.open(`http://localhost:4000${payment.proof_url}`, '_blank')}
+                              onClick={() => window.open(getAssetUrl(payment.proof_url), '_blank', 'noopener,noreferrer')}
                             >
                               Lihat Bukti
                             </Button>

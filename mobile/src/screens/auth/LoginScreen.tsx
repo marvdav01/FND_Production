@@ -29,15 +29,17 @@ export const LoginScreen = ({ navigation, route }: any) => {
       });
 
       const payload = response.data?.data || response.data;
-      const token = payload?.token;
+      const token = payload?.accessToken || payload?.token;
+      const refreshToken = payload?.refreshToken;
       const user = payload?.user;
 
-      if (!token || !user) {
+      if (!token || !refreshToken || !user) {
         throw new Error('Login gagal, coba lagi.');
       }
 
       const role: User['role'] = user.role === 'crew' ? 'CREW' : user.role === 'admin' ? 'ADMIN' : 'CLIENT';
       await AsyncStorage.setItem('token', token);
+      await AsyncStorage.setItem('refreshToken', refreshToken);
       dispatch(loginSuccess({ 
         user: { 
           id: String(user.id), 
@@ -47,7 +49,8 @@ export const LoginScreen = ({ navigation, route }: any) => {
           phone: user.phone || undefined,
           avatar_url: user.avatar_url || undefined,
         }, 
-        token 
+        token,
+        refreshToken,
       }));
     } catch (error: any) {
       const isNetworkError = !error.response && (error.code === 'ERR_NETWORK' || error.message === 'Network Error');

@@ -34,6 +34,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
   { icon: Calendar, label: "Event", href: "/admin/events" },
   { icon: FileText, label: "Request", href: "/admin/request" },
+  { icon: Users, label: "Users", href: "/admin/users" },
   { icon: CalendarDays, label: "Calendar", href: "/admin/calendar" },
   { icon: Package, label: "Inventory", href: "/admin/inventory" },
   { icon: Users, label: "Crew", href: "/admin/crew" },
@@ -42,7 +43,7 @@ const menuItems = [
   { icon: Settings, label: "Settings", href: "/admin/settings" },
 ]
 
-import { API_BASE_URL } from "@/lib/api"
+import { getAssetUrl } from "@/lib/api"
 
 export function AdminSidebar({ user: initialUser }: SidebarProps) {
   const pathname = usePathname()
@@ -53,15 +54,8 @@ export function AdminSidebar({ user: initialUser }: SidebarProps) {
     await logout()
   }
 
-  function getAvatarSrc(url: string | undefined): string | undefined {
-    if (!url) return undefined
-    if (url.startsWith('http')) return url
-    const backendBase = API_BASE_URL.replace('/api', '')
-    return `${backendBase}${url}`
-  }
-
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col bg-sidebar text-sidebar-foreground">
+    <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 flex-col bg-sidebar text-sidebar-foreground lg:flex">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2 px-6 border-b border-sidebar-border">
         <span className="text-2xl font-bold">
@@ -98,7 +92,7 @@ export function AdminSidebar({ user: initialUser }: SidebarProps) {
       <div className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3 mb-3">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={getAvatarSrc((user as any)?.avatar_url)} />
+            <AvatarImage src={getAssetUrl(user?.avatar_url)} />
             <AvatarFallback className="bg-primary text-primary-foreground">
               {user?.name?.charAt(0) || "A"}
             </AvatarFallback>

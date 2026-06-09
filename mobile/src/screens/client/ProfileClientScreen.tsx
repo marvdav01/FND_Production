@@ -7,14 +7,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logout, updateProfileSuccess } from '../../store/slices/authSlice';
 import { RootState } from '../../store';
 import { Button } from '../../components/Button';
-import { api } from '../../services/api';
+import { api, getAssetUrl } from '../../services/api';
 
 export const ProfileClientScreen = ({ navigation }: any) => {
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.auth.user);
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const refreshToken = await AsyncStorage.getItem('refreshToken');
+    await api.post('/auth/logout', { refreshToken }).catch(() => null);
     dispatch(logout());
   };
 
@@ -47,22 +49,14 @@ export const ProfileClientScreen = ({ navigation }: any) => {
   const handleAvatarUpload = async (asset: ImagePicker.ImagePickerAsset) => {
     setIsUploading(true);
     try {
-      const token = await AsyncStorage.getItem('token');
       const mimeType = asset.mimeType || 'image/jpeg';
 
-      const response = await fetch(`${api.defaults.baseURL}/auth/profile/avatar-base64`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const response = await api.post('/auth/profile/avatar-base64', {
           image: asset.base64, // base64 string dari ImagePicker
           mimeType: mimeType,
-        }),
       });
 
-      const responseData = await response.json();
+      const responseData = response.data;
 
       if (responseData.success) {
         dispatch(updateProfileSuccess({ avatar_url: responseData.data.avatar_url }));
@@ -80,11 +74,7 @@ export const ProfileClientScreen = ({ navigation }: any) => {
 
   // Convert relative url to absolute if needed
   const getAvatarUrl = () => {
-    if (!user?.avatar_url) return null;
-    if (user.avatar_url.startsWith('http')) return user.avatar_url;
-    // Get base URL logic from api.ts
-    const baseURL = api.defaults.baseURL || 'http://192.168.18.14:4000/api';
-    return `${baseURL.replace('/api', '')}${user.avatar_url}`;
+    return getAssetUrl(user?.avatar_url);
   };
 
   const handleMenuPress = (index: number) => {

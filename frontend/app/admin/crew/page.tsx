@@ -75,7 +75,7 @@ export default function CrewPage() {
           ...c,
           full_name: c.name,
           position: c.role,
-          availability: c.status || 'tersedia'
+          availability: c.status === 'available' ? 'tersedia' : c.status || 'tersedia'
         }))
         setCrew(mappedData)
       } else {

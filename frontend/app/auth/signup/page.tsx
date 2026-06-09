@@ -165,9 +165,9 @@ export default function SignupPage() {
                   id="password"
                   name="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="********"
                   required
-                  minLength={6}
+                  minLength={8}
                   className="h-12 pl-12 bg-white/5 border-white/10 text-white placeholder:text-slate-600 rounded-xl focus:ring-primary focus:border-primary transition-all"
                 />
               </div>
@@ -197,9 +197,6 @@ export default function SignupPage() {
         </div>
       </div>
 
-      {/* Decorative Blobs */}
-      <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-primary/20 rounded-full blur-[150px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-96 h-96 bg-blue-500/10 rounded-full blur-[150px] pointer-events-none" />
     </div>
   )
 }

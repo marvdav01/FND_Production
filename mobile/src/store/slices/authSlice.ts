@@ -13,6 +13,7 @@ export interface User {
 interface AuthState {
   user: User | null;
   token: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
@@ -20,6 +21,7 @@ interface AuthState {
 const initialState: AuthState = {
   user: null,
   token: null,
+  refreshToken: null,
   isAuthenticated: false,
   isLoading: false,
 };
@@ -31,24 +33,33 @@ const authSlice = createSlice({
     loginStart(state) {
       state.isLoading = true;
     },
-    loginSuccess(state, action: PayloadAction<{ user: User; token: string }>) {
+    loginSuccess(state, action: PayloadAction<{ user: User; token: string; refreshToken?: string | null }>) {
       state.isLoading = false;
       state.isAuthenticated = true;
       state.user = action.payload.user;
       state.token = action.payload.token;
+      state.refreshToken = action.payload.refreshToken || null;
+    },
+    tokenRefreshed(state, action: PayloadAction<{ token: string; refreshToken?: string | null }>) {
+      state.token = action.payload.token;
+      state.refreshToken = action.payload.refreshToken || state.refreshToken;
+      state.isAuthenticated = true;
     },
     loginFailure(state) {
       state.isLoading = false;
       state.isAuthenticated = false;
       state.user = null;
       state.token = null;
+      state.refreshToken = null;
     },
     logout(state) {
       state.isAuthenticated = false;
       state.user = null;
       state.token = null;
+      state.refreshToken = null;
       // Hapus token dari AsyncStorage
       AsyncStorage.removeItem('token').catch(() => {});
+      AsyncStorage.removeItem('refreshToken').catch(() => {});
     },
     updateProfileSuccess(state, action: PayloadAction<Partial<User>>) {
       if (state.user) {
@@ -58,5 +69,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout, updateProfileSuccess } = authSlice.actions;
+export const { loginStart, loginSuccess, loginFailure, logout, tokenRefreshed, updateProfileSuccess } = authSlice.actions;
 export default authSlice.reducer;

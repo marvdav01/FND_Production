@@ -82,6 +82,7 @@ export async function createEvent(req, res) {
     notes,
     totalAmount,
     dpAmount,
+    referenceImages = [],
     equipment = [],
     crew = [],
   } = req.body
@@ -134,8 +135,8 @@ export async function createEvent(req, res) {
     }
 
     const [result] = await connection.query(
-      'INSERT INTO events (name, type, event_date, location, notes, client_id, total_amount, dp_amount, paid_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [name, type, eventDate, location, notes, clientId, totalAmount || 0, dpAmount || 0, dpAmount || 0],
+      'INSERT INTO events (name, type, event_date, location, notes, client_id, total_amount, dp_amount, paid_amount, reference_images) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [name, type, eventDate, location, notes, clientId, totalAmount || 0, dpAmount || 0, dpAmount || 0, JSON.stringify(referenceImages)],
     )
 
     const eventId = result.insertId
@@ -183,7 +184,7 @@ export async function updateEvent(req, res) {
     [name || existing.name, type || existing.type, eventDate || existing.event_date, location || existing.location, notes || existing.notes, updatedStatus, totalAmount || existing.total_amount, dpAmount || existing.dp_amount, eventId],
   )
 
-  if (status === 'done') {
+  if (status === 'selesai' && existing.status !== 'selesai') {
     await returnEquipmentAndCrew(eventId)
   }
 
@@ -192,8 +193,14 @@ export async function updateEvent(req, res) {
 
 export async function deleteEvent(req, res) {
   const eventId = Number(req.params.id)
+  const [rows] = await pool.query('SELECT status FROM events WHERE id = ?', [eventId])
+  if (!rows[0]) {
+    return res.status(404).json({ success: false, error: 'Event not found' })
+  }
   await pool.query('UPDATE events SET status = ? WHERE id = ?', ['cancel', eventId])
-  await returnEquipmentAndCrew(eventId)
+  if (!['cancel', 'selesai'].includes(rows[0].status)) {
+    await returnEquipmentAndCrew(eventId)
+  }
   res.json({ success: true, message: 'Event cancelled' })
 }
 
@@ -209,7 +216,7 @@ async function returnEquipmentAndCrew(eventId) {
   }
 }
 
-const statusOrder = ['pending', 'survey', 'deal', 'running', 'done', 'selesai', 'cancel']
+const statusOrder = ['pending', 'survey', 'deal', 'running', 'selesai', 'cancel']
 
 export async function updateStatus(req, res) {
   try {
@@ -219,8 +226,13 @@ export async function updateStatus(req, res) {
       return res.status(400).json({ success: false, error: 'Invalid status: ' + status })
     }
 
+    const [rows] = await pool.query('SELECT status FROM events WHERE id = ?', [eventId])
+    if (!rows[0]) {
+      return res.status(404).json({ success: false, error: 'Event not found' })
+    }
+
     await pool.query('UPDATE events SET status = ? WHERE id = ?', [status, eventId])
-    if (status === 'done' || status === 'selesai') {
+    if (['selesai', 'cancel'].includes(status) && !['selesai', 'cancel'].includes(rows[0].status)) {
       await returnEquipmentAndCrew(eventId)
     }
     res.json({ success: true, message: 'Event status updated', data: { status } })
@@ -248,10 +260,9 @@ export async function getAssignedEvents(req, res) {
     FROM events e
     JOIN event_crew ec ON e.id = ec.event_id
     JOIN crew c ON ec.crew_id = c.id
-    WHERE c.name = ? 
+    WHERE c.user_id = ? OR c.name = ? 
     ORDER BY e.event_date ASC
   `
-  // We'll use the user's name to find their crew record, as crew table doesn't have user_id
-  const [rows] = await pool.query(query, [req.user.name])
+  const [rows] = await pool.query(query, [req.user.id, req.user.name])
   res.json({ success: true, data: rows })
 }

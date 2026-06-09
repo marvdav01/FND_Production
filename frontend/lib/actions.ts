@@ -13,10 +13,10 @@ export async function loginAction(formData: FormData) {
       body: JSON.stringify({ email, password }),
     })
 
-    if (res.success && res.data?.token) {
+    if (res.success && (res.data?.accessToken || res.data?.token)) {
       // Save JWT in HTTP-only cookie
-      await setSession(res.data.token)
-      return { success: true, user: res.data.user, token: res.data.token }
+      await setSession(res.data.accessToken || res.data.token, res.data.refreshToken)
+      return { success: true, user: res.data.user }
     } else {
       return { success: false, error: res.error || 'Login gagal' }
     }

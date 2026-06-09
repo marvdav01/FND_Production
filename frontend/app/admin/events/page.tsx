@@ -31,6 +31,7 @@ import {
 import Link from "next/link"
 import type { Event, EventStatus } from "@/lib/types"
 import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "sonner"
 
 const statusColors: Record<EventStatus, string> = {
   pending: "bg-gray-100 text-gray-700 border-gray-300",
@@ -82,6 +83,20 @@ export default function EventsPage() {
       console.error("Error fetching events:", error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Yakin ingin membatalkan event ini?")) return
+
+    try {
+      const res = await fetchAPI(`/events/${id}`, { method: "DELETE" })
+      if (res.success) {
+        toast.success("Event berhasil dibatalkan")
+        fetchEvents()
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Gagal membatalkan event")
     }
   }
 
@@ -223,7 +238,7 @@ export default function EventsPage() {
                                 Edit
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
+                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(event.id)}>
                               <Trash2 className="mr-2 h-4 w-4" />
                               Hapus
                             </DropdownMenuItem>

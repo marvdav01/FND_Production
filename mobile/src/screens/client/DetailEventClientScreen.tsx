@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { api } from '../../services/api';
@@ -45,11 +45,10 @@ export const DetailEventClientScreen = ({ route }: any) => {
   return (
     <View className="flex-1 bg-white">
       <View className="relative">
-        <Image
-          source={{ uri: event.image || 'https://images.unsplash.com/photo-1519741347686-c1e0aadf4611?w=600&q=80' }}
-          className="w-full h-52"
-          resizeMode="cover"
-        />
+        <View className="w-full h-52 bg-primary px-6 justify-end pb-6">
+          <Text className="text-white text-3xl font-black">FND</Text>
+          <Text className="text-blue-100 text-xs mt-1">{event.type || 'Event Production'}</Text>
+        </View>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           className="absolute top-12 left-4 bg-white/90 p-2 rounded-full"

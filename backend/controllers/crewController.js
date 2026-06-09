@@ -1,7 +1,7 @@
 import { pool } from '../config/db.js'
 
 export async function fetchCrew(req, res) {
-  const { status } = req.query
+  const status = req.query.status === 'tersedia' ? 'available' : req.query.status
   let query = 'SELECT * FROM crew'
   const params = []
 
@@ -36,7 +36,8 @@ export async function createCrew(req, res) {
 
 export async function updateCrew(req, res) {
   const id = Number(req.params.id)
-  const { name, role, phone, status } = req.body
+  const { name, role, phone } = req.body
+  const status = req.body.status === 'tersedia' ? 'available' : req.body.status
   const [rows] = await pool.query('SELECT * FROM crew WHERE id = ?', [id])
   if (!rows[0]) {
     return res.status(404).json({ success: false, error: 'Crew not found' })
@@ -71,7 +72,7 @@ export async function registerCrewAccount(req, res) {
   }
 
   const bcrypt = (await import('bcryptjs')).default
-  const hashed = bcrypt.hashSync(password, 10)
+  const hashed = bcrypt.hashSync(password, 12)
   const crewRole = role || 'Technician'
   const connection = await pool.getConnection()
 
@@ -86,8 +87,8 @@ export async function registerCrewAccount(req, res) {
 
     // Create crew record
     const [crewResult] = await connection.query(
-      'INSERT INTO crew (name, role, phone) VALUES (?, ?, ?)',
-      [name, crewRole, phone || null]
+      'INSERT INTO crew (user_id, name, role, phone) VALUES (?, ?, ?, ?)',
+      [userResult.insertId, name, crewRole, phone || null]
     )
 
     await connection.commit()

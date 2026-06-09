@@ -1,9 +1,20 @@
-import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
+import { verifyAccessToken } from '../utils/authTokens.js'
 
 dotenv.config()
 
-const secret = process.env.JWT_SECRET || 'supersecretkey'
+function readCookie(req, name) {
+  const cookieHeader = req.headers.cookie
+  if (!cookieHeader) return null
+
+  return cookieHeader
+    .split(';')
+    .map((entry) => entry.trim())
+    .reduce((value, entry) => {
+      const [key, ...rest] = entry.split('=')
+      return key === name ? decodeURIComponent(rest.join('=')) : value
+    }, null)
+}
 
 export function authenticate(req, res, next) {
   let token = null
@@ -11,23 +22,20 @@ export function authenticate(req, res, next) {
   
   if (header && header.startsWith('Bearer ')) {
     token = header.split(' ')[1]
-    console.log(`[Auth] Token from Header: ${token.substring(0, 10)}...`)
-  } else if (req.query.token) {
-    token = req.query.token
-    console.log(`[Auth] Token from Query: ${token.substring(0, 10)}...`)
+  } else {
+    token = readCookie(req, 'access_token') || readCookie(req, 'session')
   }
 
   if (!token) {
-    console.warn(`[Auth] No token found for ${req.method} ${req.originalUrl}`)
     return res.status(401).json({ success: false, error: 'Unauthorized' })
   }
+
   try {
-    const payload = jwt.verify(token, secret)
+    const payload = verifyAccessToken(token)
     req.user = payload
     next()
   } catch (error) {
-    console.error(`[Auth Error] ${req.method} ${req.originalUrl}: ${error.message}`)
-    return res.status(401).json({ success: false, error: 'Invalid token' })
+    return res.status(401).json({ success: false, error: 'Invalid or expired token' })
   }
 }
 

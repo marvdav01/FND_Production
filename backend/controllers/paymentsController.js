@@ -1,4 +1,5 @@
 import { pool } from '../config/db.js'
+import { toPublicUploadUrl } from '../middlewares/upload.js'
 
 export async function fetchPayments(req, res) {
   const { status } = req.query
@@ -24,13 +25,14 @@ export async function createPayment(req, res) {
     return res.status(400).json({ success: false, error: 'Event ID, amount and payment type are required' })
   }
 
+  const normalizedPaymentType = paymentType === 'pelunasan' ? 'full' : paymentType
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
     
     const [result] = await connection.query(
       'INSERT INTO payments (event_id, amount, payment_type, status, proof_url) VALUES (?, ?, ?, ?, ?)',
-      [eventId, amount, paymentType, status || 'unpaid', proofUrl || null]
+      [eventId, amount, normalizedPaymentType, status || 'unpaid', proofUrl || null]
     )
     
     if (status === 'paid') {
@@ -59,20 +61,33 @@ export async function updatePayment(req, res) {
     const existing = rows[0]
     
     if (!existing) {
-      connection.release()
+      await connection.rollback()
       return res.status(404).json({ success: false, error: 'Payment not found' })
     }
+
+    const nextAmount = amount ?? existing.amount
+    const nextStatus = status ?? existing.status
+    const nextProofUrl = proofUrl !== undefined ? proofUrl : existing.proof_url
     
     await connection.query(
       'UPDATE payments SET amount = ?, status = ?, proof_url = ? WHERE id = ?',
-      [amount || existing.amount, status || existing.status, proofUrl || existing.proof_url, id]
+      [nextAmount, nextStatus, nextProofUrl, id]
     )
     
-    // If status changed to paid, update event paid_amount
-    if (existing.status !== 'paid' && status === 'paid') {
+    if (existing.status !== 'paid' && nextStatus === 'paid') {
       await connection.query(
         'UPDATE events SET paid_amount = paid_amount + ? WHERE id = ?',
-        [amount || existing.amount, existing.event_id]
+        [nextAmount, existing.event_id]
+      )
+    } else if (existing.status === 'paid' && nextStatus !== 'paid') {
+      await connection.query(
+        'UPDATE events SET paid_amount = GREATEST(paid_amount - ?, 0) WHERE id = ?',
+        [existing.amount, existing.event_id]
+      )
+    } else if (existing.status === 'paid' && Number(nextAmount) !== Number(existing.amount)) {
+      await connection.query(
+        'UPDATE events SET paid_amount = GREATEST(paid_amount - ? + ?, 0) WHERE id = ?',
+        [existing.amount, nextAmount, existing.event_id]
       )
     }
     
@@ -101,7 +116,21 @@ export async function uploadProof(req, res) {
       return res.status(400).json({ success: false, error: 'File tidak ditemukan' })
     }
 
-    const proofUrl = `/uploads/${req.file.filename}`
+    if (req.user.role === 'client') {
+      const [rows] = await pool.query(
+        `SELECT p.id
+         FROM payments p
+         JOIN events e ON e.id = p.event_id
+         WHERE p.id = ? AND e.client_id = ?
+         LIMIT 1`,
+        [id, req.user.id],
+      )
+      if (!rows[0]) {
+        return res.status(403).json({ success: false, error: 'Forbidden' })
+      }
+    }
+
+    const proofUrl = toPublicUploadUrl(req.file)
     await pool.query('UPDATE payments SET proof_url = ? WHERE id = ?', [proofUrl, id])
 
     res.json({ success: true, data: { proofUrl }, message: 'Bukti pembayaran berhasil diunggah' })

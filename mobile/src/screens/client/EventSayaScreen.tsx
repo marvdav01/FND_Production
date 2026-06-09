@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
 
@@ -25,25 +25,33 @@ export const EventSayaScreen = ({ navigation }: any) => {
   const [activeTab, setActiveTab] = useState('Semua');
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchEvents = async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const response = await api.get('/events');
+      if (response.data?.success) {
+        setEvents(response.data.data || []);
+      } else {
+        throw new Error(response.data?.error || 'Gagal memuat event');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.error || error.message || 'Gagal mengambil data event');
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchEvents = async () => {
-      setLoading(true);
-      try {
-        const response = await api.get('/events');
-        if (response.data?.success) {
-          setEvents(response.data.data || []);
-        } else {
-          throw new Error(response.data?.error || 'Gagal memuat event');
-        }
-      } catch (error: any) {
-        Alert.alert('Error', error.response?.data?.error || error.message || 'Gagal mengambil data event');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchEvents();
   }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchEvents(true);
+    setRefreshing(false);
+  };
 
   const filtered = events.filter((e) => {
     if (activeTab === 'Semua') return true;
@@ -73,7 +81,12 @@ export const EventSayaScreen = ({ navigation }: any) => {
         ))}
       </ScrollView>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2563EB" />}
+      >
         {filtered.map((event) => {
           const displayStatus = STATUS_MAP[event.status] || event.status || 'Semua';
           const statusStyle = STATUS_COLOR[displayStatus] || { bg: 'bg-slate-100', text: 'text-slate-500' };
@@ -85,11 +98,10 @@ export const EventSayaScreen = ({ navigation }: any) => {
               style={{ elevation: 3, shadowColor: '#0F172A', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}
               onPress={() => navigation.navigate('DetailEventClient', { eventId: event.id })}
             >
-              <Image
-                source={{ uri: event.image || 'https://images.unsplash.com/photo-1519741347686-c1e0aadf4611?w=400&q=80' }}
-                className="w-full h-36"
-                resizeMode="cover"
-              />
+              <View className="h-24 bg-primary px-4 justify-center">
+                <Text className="text-white font-black text-2xl">FND</Text>
+                <Text className="text-blue-100 text-xs mt-1">{event.type || 'Event Production'}</Text>
+              </View>
 
               <View className="p-4">
                 <View className="flex-row justify-between items-start mb-2">

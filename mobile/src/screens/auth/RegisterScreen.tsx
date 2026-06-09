@@ -99,7 +99,7 @@ export const RegisterScreen = ({ navigation }: any) => {
 
         <Controller
           control={control}
-          rules={{ required: 'Password wajib diisi', minLength: { value: 6, message: 'Minimal 6 karakter' } }}
+          rules={{ required: 'Password wajib diisi', minLength: { value: 8, message: 'Minimal 8 karakter' } }}
           render={({ field: { onChange, onBlur, value } }) => (
             <Input
               label="Password"

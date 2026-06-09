@@ -1,15 +1,17 @@
 import express from 'express'
 import { authenticate, authorize } from '../middlewares/auth.js'
 import { fetchCrew, getCrew, createCrew, updateCrew, deleteCrew, assignCrew, registerCrewAccount } from '../controllers/crewController.js'
+import { validate } from '../middlewares/validate.js'
+import { crewSchema, registerCrewSchema, updateCrewSchema } from '../utils/schemas.js'
 
 const router = express.Router()
 
 router.use(authenticate)
 router.get('/', fetchCrew)
+router.post('/', authorize('admin'), validate(crewSchema), createCrew)
+router.post('/register', authorize('admin'), validate(registerCrewSchema), registerCrewAccount)
 router.get('/:id', getCrew)
-router.post('/', authorize('admin'), createCrew)
-router.post('/register', authorize('admin'), registerCrewAccount)
-router.put('/:id', authorize('admin'), updateCrew)
+router.put('/:id', authorize('admin'), validate(updateCrewSchema), updateCrew)
 router.delete('/:id', authorize('admin'), deleteCrew)
 router.post('/:id/assign', authorize('admin'), assignCrew)
 

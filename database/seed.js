@@ -23,6 +23,7 @@ async function run() {
     // Clear old data to prevent duplicate primary keys / entry accumulation during re-seed
     console.log('Cleaning old database records...')
     await pool.query('SET FOREIGN_KEY_CHECKS = 0')
+    await pool.query('TRUNCATE TABLE refresh_tokens')
     await pool.query('TRUNCATE TABLE payments')
     await pool.query('TRUNCATE TABLE event_equipment')
     await pool.query('TRUNCATE TABLE event_crew')

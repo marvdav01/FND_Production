@@ -8,25 +8,51 @@ CREATE TABLE IF NOT EXISTS users (
   password VARCHAR(255) NOT NULL,
   role ENUM('admin','client','crew') NOT NULL DEFAULT 'client',
   phone VARCHAR(20),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  avatar_url VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  token_hash CHAR(64) NOT NULL UNIQUE,
+  user_agent VARCHAR(255),
+  ip_address VARCHAR(64),
+  expires_at DATETIME NOT NULL,
+  revoked_at DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_refresh_tokens_user (user_id),
+  INDEX idx_refresh_tokens_expires (expires_at)
 );
 
 CREATE TABLE IF NOT EXISTS crew (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NULL,
   name VARCHAR(120) NOT NULL,
   role VARCHAR(80) NOT NULL,
   phone VARCHAR(40),
   status ENUM('available','on_job') NOT NULL DEFAULT 'available',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_crew_status (status)
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_crew_status (status),
+  INDEX idx_crew_user (user_id)
 );
 
 CREATE TABLE IF NOT EXISTS equipment (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(140) NOT NULL,
+  description TEXT,
+  category VARCHAR(80),
+  image_url VARCHAR(255),
   total_stock INT NOT NULL DEFAULT 0,
   available_stock INT NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CHECK (total_stock >= 0),
+  CHECK (available_stock >= 0),
   INDEX idx_equipment_name (name)
 );
 
@@ -37,12 +63,14 @@ CREATE TABLE IF NOT EXISTS events (
   event_date DATE NOT NULL,
   location VARCHAR(180) NOT NULL,
   notes TEXT,
-  status ENUM('pending','survey','deal','running','done','cancel') NOT NULL DEFAULT 'pending',
+  status ENUM('pending','survey','deal','running','selesai','cancel') NOT NULL DEFAULT 'pending',
   client_id INT NOT NULL,
   total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
   dp_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
   paid_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  reference_images JSON,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_events_status (status),
   INDEX idx_events_client (client_id)
@@ -74,6 +102,7 @@ CREATE TABLE IF NOT EXISTS payments (
   status ENUM('paid','unpaid') NOT NULL DEFAULT 'unpaid',
   proof_url VARCHAR(255),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
   INDEX idx_payments_status (status)
 );

@@ -91,9 +91,7 @@ export default function AdminReportsPage() {
 
   async function exportToPDF() {
     try {
-      const token = localStorage.getItem('token')
-      const url = `http://localhost:4000/api/reports/export/pdf?token=${token}`
-      window.open(url, '_blank')
+      window.open('/api/proxy/reports/export/pdf', '_blank', 'noopener,noreferrer')
       toast.success("Mempersiapkan download PDF...")
     } catch (error) {
       console.error(error)
@@ -103,17 +101,7 @@ export default function AdminReportsPage() {
 
   async function exportToExcel() {
     try {
-      const token = localStorage.getItem('token')
-      const url = `http://localhost:4000/api/reports/export/excel?token=${token}`
-      
-      // We can use a simple link click for downloading
-      const a = document.createElement('a')
-      a.href = url
-      // Adding authorization header via query param is one way if the backend supports it, 
-      // but a better way is to use a form or fetch and then download.
-      // For now, let's just use window.open if the backend allows auth via cookie or query.
-      
-      window.open(url, '_blank')
+      window.open('/api/proxy/reports/export/excel', '_blank', 'noopener,noreferrer')
       toast.success("Mempersiapkan download Excel...")
     } catch (error) {
       console.error(error)

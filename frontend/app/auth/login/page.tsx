@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { fetchAPI } from "@/lib/api"
-import { setClientSession } from "@/lib/session"
 import { Mail, Lock, LogIn, ArrowRight } from "lucide-react"
 
 export default function LoginPage() {
@@ -36,18 +35,15 @@ export default function LoginPage() {
         return
       }
 
-      const token = res.data?.token ?? res.token
       const user = res.data?.user ?? res.user
 
-      if (!token || !user) {
+      if (!user) {
         setError("Gagal mengambil data pengguna")
         return
       }
 
-      localStorage.setItem('token', token)
-      setClientSession(token)
-
       if (user.role !== "admin") {
+        await fetchAPI("/auth/logout", { method: "POST" }).catch(() => null)
         setError("Akun hanya dapat mengakses admin")
         return
       }
@@ -118,7 +114,7 @@ export default function LoginPage() {
                   id="password"
                   name="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="********"
                   required
                   className="h-13 pl-12 bg-white/5 border-white/10 text-white placeholder:text-slate-600 rounded-xl focus:ring-primary focus:border-primary transition-all"
                 />
@@ -154,9 +150,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Decorative Blobs */}
-      <div className="absolute top-[-10%] left-[-10%] w-72 h-72 bg-primary/20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-72 h-72 bg-orange-500/10 rounded-full blur-[120px] pointer-events-none" />
     </div>
   )
 }

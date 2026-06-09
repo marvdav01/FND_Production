@@ -40,7 +40,7 @@ export function useAuth() {
   }, []);
 
   const logout = async () => {
-    localStorage.removeItem('token');
+    await fetchAPI('/auth/logout', { method: 'POST' }).catch(() => null);
     clearClientSession();
     setUser(null);
     router.push('/auth/login');
