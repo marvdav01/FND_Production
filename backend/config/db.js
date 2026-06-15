@@ -1,8 +1,11 @@
 import mysql from 'mysql2/promise'
 import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { mockPool } from './mockDb.js'
 
 dotenv.config()
+dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../.env') })
 
 let pool;
 
@@ -16,6 +19,7 @@ async function createDatabasePool() {
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
+    connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 5000),
   })
 
   candidate.on('error', (err) => {

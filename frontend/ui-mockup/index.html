@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>FND Production – Crew App UI Mockup 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:#F0F0F0;color:#0F172A;}
+
+/* ── PRESENTATION WRAPPER ─────────────────────────── */
+.page{background:#E8E8E8;padding:40px 32px 60px;min-height:100vh;}
+
+/* Header */
+.pg-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:36px;}
+.pg-title{font-size:13px;font-weight:800;color:#111;letter-spacing:0.3px;line-height:1.6;}
+.pg-tag{font-size:11px;font-weight:600;color:#555;letter-spacing:1px;}
+
+/* 3-column rows */
+.row{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-bottom:40px;}
+.screen-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;}
+.screen-wrap-header{text-align:center;}
+.screen-section{font-size:10px;font-weight:800;color:#333;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
+
+/* ── PHONE FRAME ───────────────────────────────────── */
+.phone{
+  width:220px;height:460px;
+  border-radius:36px;
+  border:7px solid #1a1a1a;
+  background:#fff;
+  position:relative;overflow:hidden;
+  box-shadow:0 20px 60px rgba(0,0,0,0.35),0 4px 12px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.phone::before{
+  content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:70px;height:22px;
+  background:#1a1a1a;border-radius:0 0 14px 14px;z-index:100;
+}
+/* Status bar top row */
+.status-bar{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:26px 12px 4px;
+  font-size:7px;font-weight:700;color:white;
+  position:absolute;top:0;left:0;right:0;z-index:50;
+}
+.status-bar.dark{color:#0F172A;}
+.sb-time{font-weight:800;}
+.sb-icons{display:flex;align-items:center;gap:3px;}
+
+/* Caption below phones */
+.caption{
+  font-size:8.5px;color:#555;text-align:center;
+  max-width:200px;line-height:1.5;
+  font-style:italic;
+}
+
+/* ── DESIGN TOKENS ─────────────────────────────────── */
+:root{
+  --navy:#0F172A;--navy2:#1E293B;
+  --orange:#F97316;--orange2:#EA6A0A;
+  --white:#FFFFFF;--bg:#F8FAFC;
+  --s50:#F8FAFC;--s100:#F1F5F9;--s200:#E2E8F0;
+  --s300:#CBD5E1;--s400:#94A3B8;--s500:#64748B;--s600:#475569;
+  --green:#10B981;--blue:#3B82F6;--red:#EF4444;
+  --amber:#F59E0B;
+}
+
+/* ── SHARED MICRO COMPONENTS ───────────────────────── */
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:999px;font-size:7px;font-weight:700;}
+.badge-green{background:#D1FAE5;color:#059669;}
+.badge-blue{background:#DBEAFE;color:#2563EB;}
+.badge-orange{background:#FFF7ED;color:var(--orange);}
+.badge-red{background:#FEE2E2;color:#EF4444;}
+.badge-yellow{background:#FEF3C7;color:#D97706;}
+
+.btn-orange{
+  width:100%;padding:9px;background:var(--orange);
+  border:none;border-radius:12px;
+  color:white;font-size:10px;font-weight:700;cursor:pointer;
+  box-shadow:0 3px 10px rgba(249,115,22,0.3);font-family:'Inter',sans-serif;
+}
+
+.progress-track{height:4px;border-radius:999px;background:var(--s100);overflow:hidden;}
+.progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--orange),#FB923C);}
+.progress-fill-blue{background:linear-gradient(90deg,#3B82F6,#60A5FA);}
+
+.info-r{display:flex;align-items:flex-start;gap:5px;margin-bottom:4px;}
+.info-r svg{flex-shrink:0;margin-top:1px;}
+.info-r span{font-size:8px;color:var(--s600);}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SCREEN 1 — DASHBOARD / BERANDA
+══════════════════════════════════════════════════════════════════════════ */
+.s1{display:flex;flex-direction:column;height:100%;}
+.s1-hdr{background:var(--navy);padding:28px 12px 32px;}
+.s1-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.menu-ico{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.s1-brand-t{font-size:9px;font-weight:800;color:white;letter-spacing:2px;text-align:center;}
+.s1-brand-s{font-size:7px;color:var(--s400);letter-spacing:2px;text-align:center;}
+.notif-ico{position:relative;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.notif-dot{position:absolute;top:3px;right:3px;width:9px;height:9px;border-radius:50%;background:var(--red);border:1.5px solid var(--navy);display:flex;align-items:center;justify-content:center;font-size:5px;font-weight:800;color:white;}
+
+.s1-user{display:flex;align-items:center;gap:8px;}
+.ava{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--orange),#FB923C);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:white;border:2px solid rgba(255,255,255,0.3);flex-shrink:0;overflow:hidden;}
+.ava img{width:100%;height:100%;object-fit:cover;}
+.s1-name{font-size:11px;font-weight:800;color:white;}
+.s1-sub{font-size:8px;color:var(--s400);margin-top:1px;}
+
+.s1-body{background:var(--bg);border-radius:20px 20px 0 0;margin-top:-14px;flex:1;overflow:hidden;padding:12px 10px 64px;}
+.s1-scroll{height:100%;overflow-y:auto;display:flex;flex-direction:column;gap:10px;}
+.s1-scroll::-webkit-scrollbar{display:none;}
+
+/* Stats card */
+.stats-card{background:white;border-radius:14px;padding:11px;border:1px solid var(--s100);box-shadow:0 1px 8px rgba(15,23,42,0.06);}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;}
+.stat-box{display:flex;align-items:center;gap:7px;padding:7px;border-radius:10px;background:var(--s50);border:1px solid var(--s100);}
+.ring{position:relative;width:36px;height:36px;flex-shrink:0;}
+.ring svg{transform:rotate(-90deg);}
+.ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:800;color:var(--navy);}
+.stat-info-val{font-size:12px;font-weight:800;color:var(--navy);}
+.stat-info-lbl{font-size:7px;color:var(--s500);line-height:1.3;}
+
+/* Today's tasks */
+.sec-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.sec-title{font-size:10px;font-weight:800;color:var(--navy);}
+.sec-link{font-size:8px;font-weight:700;color:var(--orange);}
+
+.task-card{background:white;border-radius:12px;padding:10px;border:1px solid var(--s100);box-shadow:0 1px 6px rgba(15,23,42,0.05);margin-bottom:7px;}
+.tc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;margin-bottom:5px;}
+.tc-title{font-size:9px;font-weight:700;color:var(--navy);flex:1;line-height:1.3;}
+
+/* Announcement mini */
+.announce{background:rgba(249,115,22,0.05);border:1px solid rgba(249,115,22,0.15);border-radius:10px;padding:8px;display:flex;gap:7px;align-items:flex-start;}
+.announce-ico{width:26px;height:26px;border-radius:8px;background:rgba(249,115,22,0.12);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
+.announce-t{font-size:8px;font-weight:600;color:var(--navy);line-height:1.4;}
+.announce-sub{font-size:7px;color:var(--s400);margin-top:2px;}
+
+/* ── BOTTOM NAV ─────────────────────────────────────── */
+.bnav{position:absolute;bottom:0;left:0;right:0;height:54px;background:white;border-top:1px solid var(--s100);display:flex;align-items:center;justify-content:space-around;padding:0 4px;box-shadow:0 -3px 12px rgba(0,0,0,0.06);z-index:50;}
+.ni{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;cursor:pointer;}
+.ni-dot{width:28px;height:28px;border-radius:9px;background:rgba(249,115,22,0.12);display:flex;align-items:center;justify-content:center;}
+.ni-ico{width:20px;height:20px;display:flex;align-items:center;justify-content:center;}
+.ni-lbl{font-size:7px;font-weight:600;color:var(--s400);}
+.ni.active .ni-lbl{color:var(--orange);}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SCREEN 2 — DAFTAR TUGAS
+══════════════════════════════════════════════════════════════════════════ */
+.s2-hdr{background:var(--navy);padding:28px 12px 12px;}
+.s2-title{font-size:13px;font-weight:800;color:white;text-align:center;margin-bottom:8px;}
+.search-bar{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.1);border-radius:10px;padding:7px 10px;border:1px solid rgba(255,255,255,0.1);}
+.search-bar input{background:none;border:none;outline:none;color:white;font-size:9px;flex:1;font-family:'Inter',sans-serif;}
+.search-bar input::placeholder{color:rgba(255,255,255,0.4);}
+.pills{display:flex;gap:5px;padding:8px 10px;background:white;border-bottom:1px solid var(--s100);}
+.pill{flex:1;text-align:center;padding:5px 0;border-radius:8px;font-size:8px;font-weight:700;cursor:pointer;}
+.pill.active{background:var(--navy);color:white;}
+.pill:not(.active){background:var(--s50);color:var(--s500);}
+
+.tcard{background:white;border-radius:14px;overflow:hidden;margin-bottom:8px;box-shadow:0 1px 8px rgba(15,23,42,0.07);border:1px solid var(--s100);}
+.tcard-thumb{height:70px;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.tcard-thumb-grad{position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(0,0,0,0.5));}
+.tcard-body{padding:9px;}
+.tcard-meta{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;margin-bottom:5px;}
+.tcard-name{font-size:9px;font-weight:700;color:var(--navy);flex:1;}
+.prog-row{display:flex;justify-content:space-between;margin:5px 0 4px;}
+.prog-lbl{font-size:7px;color:var(--s500);}
+.prog-val{font-size:7px;font-weight:700;color:var(--orange);}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SCREEN 3 — DETAIL TUGAS
+══════════════════════════════════════════════════════════════════════════ */
+.s3-hero{height:140px;position:relative;overflow:hidden;}
+.s3-hero-bg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+.s3-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,23,42,0.25) 0%,rgba(15,23,42,0.7) 100%);}
+.s3-topbar{position:absolute;top:26px;left:10px;right:10px;display:flex;align-items:center;justify-content:space-between;z-index:10;}
+.back-btn{width:26px;height:26px;border-radius:50%;background:rgba(15,23,42,0.5);backdrop-filter:blur(6px);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.s3-body{background:white;border-radius:18px 18px 0 0;margin-top:-16px;height:calc(100% - 124px);overflow:hidden;padding:12px 10px 0;}
+.s3-scroll{height:100%;overflow-y:auto;padding-bottom:56px;}
+.s3-scroll::-webkit-scrollbar{display:none;}
+
+/* Horizontal timeline */
+.htimeline{display:flex;align-items:center;margin:8px 0;}
+.ht-node{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;}
+.ht-circle{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;}
+.ht-circle.done{background:var(--green);color:white;}
+.ht-circle.current{background:var(--orange);color:white;}
+.ht-circle.pending{background:var(--s100);color:var(--s400);border:1.5px solid var(--s300);}
+.ht-label{font-size:6px;color:var(--s500);text-align:center;font-weight:600;}
+.ht-line{height:2px;flex:1;background:var(--s200);}
+.ht-line.done{background:var(--green);}
+
+.fab-row{display:flex;gap:6px;margin:8px 0;}
+.fab{flex:1;padding:7px;border-radius:10px;border:none;display:flex;align-items:center;justify-content:center;gap:4px;font-size:8px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;}
+.fab-primary{background:var(--navy);color:white;}
+.fab-sec{background:var(--s50);color:var(--navy);border:1px solid var(--s200);}
+
+.chk-item{display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid var(--s100);}
+.chkbox{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--s300);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.chkbox.checked{background:var(--green);border-color:var(--green);}
+.chklbl{font-size:8px;}
+.chklbl.checked{color:var(--s400);text-decoration:line-through;}
+.chklbl:not(.checked){color:var(--navy);font-weight:500;}
+
+.sticky-bar{position:absolute;bottom:0;left:0;right:0;background:white;padding:8px 10px 10px;border-top:1px solid var(--s100);}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SCREEN 4 — CHECK-IN
+══════════════════════════════════════════════════════════════════════════ */
+.s4-map{height:56%;position:relative;overflow:hidden;}
+.map-bg{
+  width:100%;height:100%;
+  background:
+    repeating-linear-gradient(0deg,transparent,transparent 18px,rgba(180,200,220,0.4) 19px),
+    repeating-linear-gradient(90deg,transparent,transparent 18px,rgba(180,200,220,0.4) 19px),
+    linear-gradient(135deg,#e8f0f8 0%,#dde8f5 50%,#e4eaf5 100%);
+}
+.map-roads{position:absolute;inset:0;}
+/* Streets simulation */
+.road-h{position:absolute;height:6px;background:white;border-radius:3px;left:0;right:0;box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+.road-v{position:absolute;width:6px;background:white;border-radius:3px;top:0;bottom:0;box-shadow:1px 0 3px rgba(0,0,0,0.08);}
+.road-h2{position:absolute;height:4px;background:rgba(255,255,255,0.8);border-radius:2px;left:0;right:0;}
+.road-v2{position:absolute;width:4px;background:rgba(255,255,255,0.8);border-radius:2px;top:0;bottom:0;}
+
+.geofence{position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);width:90px;height:90px;border-radius:50%;background:rgba(249,115,22,0.12);border:2px solid rgba(249,115,22,0.35);display:flex;align-items:center;justify-content:center;}
+.geofence-inner{width:44px;height:44px;border-radius:50%;background:rgba(249,115,22,0.22);display:flex;align-items:center;justify-content:center;}
+.location-pin{font-size:22px;animation:pin-bounce 2s infinite;filter:drop-shadow(0 4px 6px rgba(249,115,22,0.5));}
+@keyframes pin-bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);}}
+
+.map-chip{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:white;border-radius:999px;padding:4px 10px;font-size:8px;font-weight:700;color:var(--navy);box-shadow:0 2px 8px rgba(0,0,0,0.12);white-space:nowrap;z-index:5;}
+.map-btns{position:absolute;right:8px;bottom:8px;display:flex;flex-direction:column;gap:3px;}
+.map-btn{width:26px;height:26px;border-radius:7px;background:white;border:none;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.12);cursor:pointer;}
+.dist-tag{position:absolute;bottom:8px;left:8px;background:white;border-radius:8px;padding:4px 8px;display:flex;align-items:center;gap:4px;box-shadow:0 2px 6px rgba(0,0,0,0.1);}
+.dist-tag span{font-size:8px;font-weight:700;color:var(--navy);}
+
+.s4-sheet{background:white;border-radius:20px 20px 0 0;padding:12px 12px 10px;height:calc(44% + 16px);margin-top:-16px;}
+.sheet-handle{width:30px;height:3px;border-radius:999px;background:var(--s200);margin:0 auto 10px;}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SCREEN 5 — DOKUMENTASI
+══════════════════════════════════════════════════════════════════════════ */
+.s5-hdr{background:var(--navy);padding:28px 12px 10px;}
+.tab-bar{display:flex;background:white;border-bottom:1px solid var(--s100);}
+.tab-item{flex:1;text-align:center;padding:8px 0;font-size:9px;font-weight:700;color:var(--s400);cursor:pointer;position:relative;}
+.tab-item.active{color:var(--orange);}
+.tab-item.active::after{content:'';position:absolute;bottom:0;left:20%;right:20%;height:2px;background:var(--orange);border-radius:999px;}
+.s5-toolbar{display:flex;align-items:center;gap:6px;padding:7px 10px;background:white;border-bottom:1px solid var(--s100);}
+.mini-search{flex:1;display:flex;align-items:center;gap:5px;background:var(--s50);border-radius:8px;padding:5px 8px;border:1px solid var(--s200);}
+.mini-search span{font-size:8px;color:var(--s400);}
+.filter-ico{width:28px;height:28px;border-radius:8px;background:var(--s50);border:1px solid var(--s200);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+
+.photo-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;padding:2px;}
+.photo-cell{border-radius:3px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.photo-cell.h1{height:70px;}
+.photo-cell.h2{height:70px;grid-row:span 2;height:142px;}
+.upload-cell{height:70px;border:2px dashed var(--orange);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;background:rgba(249,115,22,0.03);margin:2px;}
+.upload-cell span{font-size:7px;font-weight:700;color:var(--orange);}
+
+/* Photo gradients */
+.pg1{background:linear-gradient(135deg,#1a1a3a,#2d2060);}
+.pg2{background:linear-gradient(135deg,#1a3a2a,#0d2a1a);}
+.pg3{background:linear-gradient(135deg,#3a1a1a,#5a2020);}
+.pg4{background:linear-gradient(135deg,#1a2a3a,#0d1a2a);}
+.pg5{background:linear-gradient(135deg,#2a2a1a,#3a3010);}
+.pg6{background:linear-gradient(135deg,#2a1a3a,#1a0a2a);}
+.pg7{background:linear-gradient(135deg,#1a3a3a,#0d2a2a);}
+.pg8{background:linear-gradient(135deg,#3a2a1a,#2a1a0a);}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SCREEN 6 — RIWAYAT TUGAS
+══════════════════════════════════════════════════════════════════════════ */
+.hist-card{background:white;border-radius:12px;overflow:hidden;margin-bottom:7px;box-shadow:0 1px 8px rgba(15,23,42,0.07);border:1px solid var(--s100);display:flex;align-items:stretch;}
+.hc-thumb{width:60px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.hc-body{flex:1;padding:8px 9px;}
+.hc-name{font-size:9px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.hc-badges{display:flex;align-items:center;gap:4px;margin-top:5px;}
+.star-badge{display:inline-flex;align-items:center;gap:2px;background:#FFF7ED;border-radius:999px;padding:2px 7px;font-size:8px;font-weight:700;color:var(--orange);}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SCREEN 7 — NOTIFIKASI
+══════════════════════════════════════════════════════════════════════════ */
+.notif-grp{font-size:8px;font-weight:700;color:var(--s400);padding:6px 10px 3px;text-transform:uppercase;letter-spacing:1px;}
+.notif-row{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-bottom:1px solid var(--s50);background:white;cursor:pointer;}
+.notif-row.unread{background:rgba(249,115,22,0.025);}
+.notif-ico{width:30px;height:30px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+.notif-body{flex:1;}
+.notif-title{font-size:8.5px;font-weight:700;color:var(--navy);}
+.notif-desc{font-size:8px;color:var(--s500);line-height:1.4;margin-top:1px;}
+.notif-time{font-size:7px;color:var(--s400);margin-top:2px;}
+.unread-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.swipe-hint{font-size:8px;color:var(--s400);text-align:center;padding:5px;border-top:1px solid var(--s100);background:var(--s50);}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SCREEN 8 — PROFIL PENGGUNA
+══════════════════════════════════════════════════════════════════════════ */
+.s8-hdr{background:var(--navy);padding:28px 12px 36px;}
+.s8-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.s8-body{background:var(--bg);border-radius:20px 20px 0 0;margin-top:-16px;height:calc(100% - 142px);overflow:hidden;padding:0 10px 0;}
+.s8-scroll{height:100%;overflow-y:auto;padding-top:0;padding-bottom:64px;}
+.s8-scroll::-webkit-scrollbar{display:none;}
+
+.profile-float{background:white;border-radius:14px;padding:12px;margin-top:-30px;box-shadow:0 6px 24px rgba(15,23,42,0.1);border:1px solid var(--s100);text-align:center;}
+.profile-ava{width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--orange),#FB923C);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:white;border:3px solid white;box-shadow:0 4px 12px rgba(249,115,22,0.3);margin:0 auto -29px;position:relative;z-index:10;}
+.profile-name{font-size:13px;font-weight:800;color:var(--navy);margin-top:34px;margin-bottom:1px;}
+.profile-role{font-size:8px;color:var(--s500);}
+
+.analytics-row{display:flex;gap:6px;margin-top:10px;}
+.analytics-item{flex:1;text-align:center;padding:8px 4px;border-radius:10px;background:var(--s50);border:1px solid var(--s100);}
+.anal-val{font-size:12px;font-weight:800;color:var(--navy);}
+.anal-lbl{font-size:7px;color:var(--s500);margin-top:1px;}
+
+.skill-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
+.skill-tag{background:rgba(249,115,22,0.1);color:var(--orange);border:1px solid rgba(249,115,22,0.2);border-radius:999px;padding:3px 9px;font-size:8px;font-weight:700;}
+
+.menu-card{background:white;border-radius:12px;margin-top:10px;overflow:hidden;border:1px solid var(--s100);box-shadow:0 1px 6px rgba(15,23,42,0.05);}
+.mitem{display:flex;align-items:center;gap:8px;padding:9px 10px;border-bottom:1px solid var(--s50);cursor:pointer;}
+.mitem:last-child{border-bottom:none;}
+.mico{width:28px;height:28px;border-radius:8px;background:var(--s50);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.mlabel{font-size:9px;font-weight:600;color:var(--navy);flex:1;}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SCREEN 9 — NAVIGATION DRAWER
+══════════════════════════════════════════════════════════════════════════ */
+.s9{width:100%;height:100%;background:linear-gradient(160deg,#0A1128 0%,#1E293B 55%,#0F172A 100%);display:flex;flex-direction:column;overflow:hidden;position:relative;}
+.s9-glow1{position:absolute;top:-40px;right:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(249,115,22,0.18) 0%,transparent 70%);pointer-events:none;}
+.s9-glow2{position:absolute;bottom:60px;left:-30px;width:130px;height:130px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,0.1) 0%,transparent 70%);pointer-events:none;}
+
+.s9-logo{padding:34px 16px 12px;display:flex;align-items:center;gap:8px;}
+.s9-logo-mark{width:32px;height:32px;border-radius:10px;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:white;box-shadow:0 3px 10px rgba(249,115,22,0.4);}
+.s9-co-name{font-size:12px;font-weight:800;color:white;}
+.s9-co-sub{font-size:7px;color:var(--s400);letter-spacing:2px;}
+
+.s9-divider{height:1px;background:rgba(255,255,255,0.07);margin:0 16px;}
+
+.s9-user{display:flex;align-items:center;gap:8px;padding:10px 16px;}
+.s9-ava{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--orange),#FB923C);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:white;flex-shrink:0;}
+.s9-uname{font-size:10px;font-weight:700;color:white;}
+.s9-urole{font-size:8px;color:var(--s400);}
+.online-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 5px rgba(16,185,129,0.5);margin-left:auto;}
+
+.s9-nav{flex:1;padding:6px 10px;overflow:hidden;}
+.s9-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;margin-bottom:1px;}
+.s9-item.active{background:var(--orange);box-shadow:0 3px 10px rgba(249,115,22,0.3);}
+.s9-item:not(.active):hover{background:rgba(255,255,255,0.05);}
+.s9-lbl{font-size:10px;font-weight:600;}
+.s9-item.active .s9-lbl{color:white;}
+.s9-item:not(.active) .s9-lbl{color:var(--s300);}
+.s9-badge{margin-left:auto;background:var(--red);color:white;border-radius:999px;padding:1px 5px;font-size:7px;font-weight:700;}
+
+.s9-logout{padding:10px 16px;border-top:1px solid rgba(255,255,255,0.06);}
+.logout-btn{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.12);}
+.logout-lbl{font-size:10px;font-weight:700;color:var(--red);}
+
+/* SVG ICON helpers */
+svg{display:inline-block;}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ═══════ PRESENTATION HEADER ═══════ -->
+<div class="pg-head">
+  <div class="pg-title">
+    MODERN 2026 MOBILE APP UI:<br/>
+    EVENT PRODUCTION CREW MANAGEMENT SYSTEM
+  </div>
+  <div class="pg-tag">CONCEPT MOCKUP PORTFOLIO</div>
+</div>
+
+<!-- ═══════ ROW 1: SCREENS 1–3 ═══════ -->
+<div class="row">
+
+  <!-- ───── SCREEN 1: DASHBOARD ───── -->
+  <div class="screen-wrap">
+    <div class="screen-section">DASHBOARD / BERANDA</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="sb-time">9:41</span>
+        <span class="sb-icons">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="white"><rect x="0" y="4" width="2" height="4" rx="1"/><rect x="3" y="2.5" width="2" height="5.5" rx="1"/><rect x="6" y="1" width="2" height="7" rx="1"/></svg>
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="white"><path d="M5 1.5C6.5 1.5 7.8 2.1 8.8 3.1L10 2C8.7.8 6.9 0 5 0 3.1 0 1.3.8 0 2l1.2 1.1C2.2 2.1 3.5 1.5 5 1.5z"/><path d="M5 4C5.8 4 6.5 4.3 7.1 4.8L8.3 3.7C7.4 2.9 6.3 2.5 5 2.5c-1.3 0-2.4.4-3.3 1.2l1.2 1.1C3.5 4.3 4.2 4 5 4z"/><circle cx="5" cy="6.5" r="1"/></svg>
+          <svg width="18" height="8" viewBox="0 0 18 8" fill="white"><rect x="0" y="1" width="14" height="6" rx="2" fill="none" stroke="white" stroke-width="1"/><rect x="1.5" y="2.5" width="9" height="3" rx="1"/><rect x="15" y="3" width="2" height="2" rx="1"/></svg>
+        </span>
+      </div>
+
+      <div class="s1" style="height:100%;">
+        <!-- Header -->
+        <div class="s1-hdr">
+          <div class="s1-topbar">
+            <div class="menu-ico">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </div>
+            <div>
+              <div class="s1-brand-t">FND PRODUCTION</div>
+              <div class="s1-brand-s">CREW APP</div>
+            </div>
+            <div class="notif-ico">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <div class="notif-dot">3</div>
+            </div>
+          </div>
+          <div class="s1-user">
+            <div class="ava">
+              <!-- Profile avatar with gradient + initials -->
+              AS
+            </div>
+            <div>
+              <div class="s1-name">Halo, Andi Setiawan</div>
+              <div class="s1-sub">competition.fn.easy/engineer#k</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div class="s1-body">
+          <div class="s1-scroll">
+            <!-- Stats Card -->
+            <div class="stats-card">
+              <div style="font-size:9px;font-weight:800;color:var(--navy);margin-bottom:8px;">Performa Bulan Ini</div>
+              <div class="stats-grid">
+                <!-- Tugas Selesai -->
+                <div class="stat-box">
+                  <div class="ring">
+                    <svg width="36" height="36" viewBox="0 0 36 36">
+                      <circle cx="18" cy="18" r="14" stroke="#F1F5F9" stroke-width="3.5" fill="none"/>
+                      <circle cx="18" cy="18" r="14" stroke="#F97316" stroke-width="3.5" fill="none" stroke-dasharray="87.96" stroke-dashoffset="21.99" stroke-linecap="round"/>
+                    </svg>
+                    <div class="ring-label" style="color:#F97316">75%</div>
+                  </div>
+                  <div>
+                    <div class="stat-info-val">12</div>
+                    <div class="stat-info-lbl">Tugas Selesai<br/>Bulan Ini</div>
+                  </div>
+                </div>
+                <!-- Event Terkumpul -->
+                <div class="stat-box">
+                  <div class="ring">
+                    <svg width="36" height="36" viewBox="0 0 36 36">
+                      <circle cx="18" cy="18" r="14" stroke="#F1F5F9" stroke-width="3.5" fill="none"/>
+                      <circle cx="18" cy="18" r="14" stroke="#3B82F6" stroke-width="3.5" fill="none" stroke-dasharray="87.96" stroke-dashoffset="35.18" stroke-linecap="round"/>
+                    </svg>
+                    <div class="ring-label" style="color:#3B82F6">4</div>
+                  </div>
+                  <div>
+                    <div class="stat-info-val">4</div>
+                    <div class="stat-info-lbl">Event<br/>Terkumpul</div>
+                  </div>
+                </div>
+                <!-- Progres Naskah -->
+                <div class="stat-box">
+                  <div class="ring">
+                    <svg width="36" height="36" viewBox="0 0 36 36">
+                      <circle cx="18" cy="18" r="14" stroke="#F1F5F9" stroke-width="3.5" fill="none"/>
+                      <circle cx="18" cy="18" r="14" stroke="#10B981" stroke-width="3.5" fill="none" stroke-dasharray="87.96" stroke-dashoffset="8.8" stroke-linecap="round"/>
+                    </svg>
+                    <div class="ring-label" style="color:#10B981;font-size:6px">90%</div>
+                  </div>
+                  <div>
+                    <div class="stat-info-val">30.8</div>
+                    <div class="stat-info-lbl">Progres<br/>Naskah</div>
+                  </div>
+                </div>
+                <!-- Rating -->
+                <div class="stat-box">
+                  <div class="ring">
+                    <svg width="36" height="36" viewBox="0 0 36 36">
+                      <circle cx="18" cy="18" r="14" stroke="#F1F5F9" stroke-width="3.5" fill="none"/>
+                      <circle cx="18" cy="18" r="14" stroke="#F59E0B" stroke-width="3.5" fill="none" stroke-dasharray="87.96" stroke-dashoffset="4.4" stroke-linecap="round"/>
+                    </svg>
+                    <div class="ring-label" style="color:#F59E0B;font-size:6px">★</div>
+                  </div>
+                  <div>
+                    <div class="stat-info-val">4.8</div>
+                    <div class="stat-info-lbl">Rating<br/>Kaller Setter</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Today Tasks -->
+            <div>
+              <div class="sec-hdr">
+                <span class="sec-title">Today's Tasks</span>
+                <span class="sec-link">Lihat Semua</span>
+              </div>
+
+              <div class="task-card" style="cursor:pointer;">
+                <div class="tc-top">
+                  <div class="tc-title">Wedding Andi & Sinta</div>
+                  <div class="badge badge-green">On Going</div>
+                </div>
+                <div class="info-r">
+                  <svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+                  <span>Grand Ballroom, Jakarta</span>
+                </div>
+                <div class="info-r">
+                  <svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span>Jumat, 12 Juni 2026</span>
+                </div>
+              </div>
+
+              <div class="task-card" style="cursor:pointer;">
+                <div class="tc-top">
+                  <div class="tc-title">Corporate Gathering PT Maju</div>
+                  <div class="badge badge-blue">Persiapan</div>
+                </div>
+                <div class="info-r">
+                  <svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+                  <span>Shangri-La Hotel, Jakarta</span>
+                </div>
+                <div class="info-r">
+                  <svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span>Jumat, 12 Juni 2026</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Upcoming Event -->
+            <div class="announce">
+              <div class="announce-ico">📢</div>
+              <div>
+                <div style="font-size:7px;font-weight:700;color:var(--s400);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Upcoming Event Card</div>
+                <div class="announce-t">Live Music Event</div>
+                <div style="display:flex;align-items:center;gap:5px;margin-top:4px">
+                  <div class="badge badge-orange" style="font-size:7px;">Menunggu</div>
+                  <div style="font-size:7px;color:var(--s400)">18 Juni 2026</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Nav -->
+        <div class="bnav">
+          <div class="ni active">
+            <div class="ni-dot">
+              <svg width="14" height="14" fill="#F97316" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            </div>
+            <span class="ni-lbl">Beranda</span>
+          </div>
+          <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></div><span class="ni-lbl">Tugas</span></div>
+          <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div><span class="ni-lbl">Check-In</span></div>
+          <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div><span class="ni-lbl">Galeri</span></div>
+          <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="ni-lbl">Profil</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">Modern outline icons, Bottom Navigations, soft shadows, glassmorphism.<br/>(Ref. Linear App, Notion Mobile)</div>
+  </div>
+
+  <!-- ───── SCREEN 2: DAFTAR TUGAS ───── -->
+  <div class="screen-wrap">
+    <div class="screen-section">DAFTAR TUGAS</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="sb-time">9:41</span>
+        <span class="sb-icons">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="white"><rect x="0" y="4" width="2" height="4" rx="1"/><rect x="3" y="2.5" width="2" height="5.5" rx="1"/><rect x="6" y="1" width="2" height="7" rx="1"/></svg>
+          <svg width="18" height="8" viewBox="0 0 18 8" fill="white"><rect x="0" y="1" width="14" height="6" rx="2" fill="none" stroke="white" stroke-width="1"/><rect x="1.5" y="2.5" width="9" height="3" rx="1"/><rect x="15" y="3" width="2" height="2" rx="1"/></svg>
+        </span>
+      </div>
+
+      <!-- Daftar Tugas Header -->
+      <div class="s2-hdr">
+        <div class="s2-title">Daftar Tugas</div>
+        <div class="search-bar">
+          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.5)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input placeholder="Search"/>
+          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.5)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </div>
+      </div>
+
+      <!-- Pill tabs -->
+      <div class="pills">
+        <div class="pill active">Aktif</div>
+        <div class="pill">On Going</div>
+        <div class="pill">Selesai</div>
+      </div>
+
+      <!-- Cards -->
+      <div style="padding:8px 10px 60px;background:var(--bg);height:calc(100% - 162px);overflow-y:auto;">
+        <div style="overflow-y:auto;height:100%;" class="s1-scroll">
+
+          <!-- Card 1 – Wedding -->
+          <div class="tcard">
+            <div class="tcard-thumb" style="background:linear-gradient(135deg,#1a2040,#2d1850);">
+              <div class="tcard-thumb-grad"></div>
+              <div style="font-size:30px;z-index:1;position:relative;">💍</div>
+              <div style="position:absolute;bottom:6px;left:8px;z-index:2;">
+                <div class="badge badge-green">On Going</div>
+              </div>
+            </div>
+            <div class="tcard-body">
+              <div class="tcard-meta">
+                <div class="tcard-name">Wedding Andi & Sinta</div>
+              </div>
+              <div class="info-r"><svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg><span>Hotel Mulia, Jakarta</span></div>
+              <div class="info-r"><svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>12 Juni 2026</span></div>
+              <div class="prog-row"><span class="prog-lbl">Progress</span><span class="prog-val">6/9</span></div>
+              <div class="progress-track" style="margin-bottom:6px;"><div class="progress-fill" style="width:66%"></div></div>
+              <button class="btn-orange">Lihat Detail</button>
+            </div>
+          </div>
+
+          <!-- Card 2 – Corporate -->
+          <div class="tcard">
+            <div class="tcard-thumb" style="background:linear-gradient(135deg,#0d2a1a,#1a3a30);">
+              <div class="tcard-thumb-grad"></div>
+              <div style="font-size:30px;z-index:1;position:relative;">🏢</div>
+              <div style="position:absolute;bottom:6px;left:8px;z-index:2;">
+                <div class="badge badge-blue">Persiapan</div>
+              </div>
+            </div>
+            <div class="tcard-body">
+              <div class="tcard-meta"><div class="tcard-name">Corporate Gathering PT Maju</div></div>
+              <div class="info-r"><svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg><span>Shangri-La, Jakarta</span></div>
+              <div class="info-r"><svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>15 Juni 2026</span></div>
+              <div class="prog-row"><span class="prog-lbl">Progress</span><span class="prog-val" style="color:#3B82F6;">2/9</span></div>
+              <div class="progress-track" style="margin-bottom:6px;"><div class="progress-fill progress-fill-blue" style="width:22%"></div></div>
+              <button class="btn-orange">Lihat Detail</button>
+            </div>
+          </div>
+
+          <!-- Card 3 – Live Music -->
+          <div class="tcard">
+            <div class="tcard-thumb" style="background:linear-gradient(135deg,#1a0a2a,#2a0a1a);">
+              <div class="tcard-thumb-grad"></div>
+              <div style="font-size:30px;z-index:1;position:relative;">🎵</div>
+              <div style="position:absolute;bottom:6px;left:8px;z-index:2;">
+                <div class="badge badge-yellow">Menunggu</div>
+              </div>
+            </div>
+            <div class="tcard-body">
+              <div class="tcard-meta"><div class="tcard-name">Live Music Event</div></div>
+              <div class="info-r"><svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg><span>Istora Senayan</span></div>
+              <div class="info-r"><svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>18 Juni 2026</span></div>
+              <div class="prog-row"><span class="prog-lbl">Progress</span><span class="prog-val" style="color:#F59E0B;">0/9</span></div>
+              <div class="progress-track" style="margin-bottom:6px;"><div class="progress-fill" style="width:0%;background:var(--amber)"></div></div>
+              <button class="btn-orange">Lihat Detail</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Nav -->
+      <div class="bnav">
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div><span class="ni-lbl">Beranda</span></div>
+        <div class="ni active"><div class="ni-dot"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#F97316" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></div><span class="ni-lbl">Tugas</span></div>
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div><span class="ni-lbl">Check-In</span></div>
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div><span class="ni-lbl">Galeri</span></div>
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="ni-lbl">Profil</span></div>
+      </div>
+    </div>
+    <div class="caption">High fidelity mobile app style.<br/>Modern enterprise mobile app style.</div>
+  </div>
+
+  <!-- ───── SCREEN 3: DETAIL TUGAS ───── -->
+  <div class="screen-wrap">
+    <div class="screen-section">DETAIL TUGAS</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="sb-time">9:41</span>
+        <span class="sb-icons">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="white"><rect x="0" y="4" width="2" height="4" rx="1"/><rect x="3" y="2.5" width="2" height="5.5" rx="1"/><rect x="6" y="1" width="2" height="7" rx="1"/></svg>
+          <svg width="18" height="8" viewBox="0 0 18 8" fill="white"><rect x="0" y="1" width="14" height="6" rx="2" fill="none" stroke="white" stroke-width="1"/><rect x="1.5" y="2.5" width="9" height="3" rx="1"/><rect x="15" y="3" width="2" height="2" rx="1"/></svg>
+        </span>
+      </div>
+
+      <!-- Hero Banner -->
+      <div class="s3-hero">
+        <div class="s3-hero-bg" style="background:linear-gradient(135deg,#1a2540,#2a3060,#1a1040);width:100%;height:100%;">
+          <div style="font-size:50px;opacity:0.6;user-select:none;">🎊</div>
+        </div>
+        <div class="s3-overlay"></div>
+        <div class="s3-topbar">
+          <div class="back-btn"><svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></div>
+          <span style="font-size:9px;font-weight:700;color:white;">Hero Banner Event</span>
+          <div class="badge badge-green">Selesai</div>
+        </div>
+        <!-- Horizontal Timeline inside hero bottom -->
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:0 10px 8px;z-index:5;">
+          <div class="htimeline">
+            <div class="ht-node">
+              <div class="ht-circle done"><svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="ht-label" style="color:white;">Persiapan</div>
+            </div>
+            <div class="ht-line done"></div>
+            <div class="ht-node">
+              <div class="ht-circle done"><svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="ht-label" style="color:white;">Timeline</div>
+            </div>
+            <div class="ht-line done"></div>
+            <div class="ht-node">
+              <div class="ht-circle current">3</div>
+              <div class="ht-label" style="color:white;">Progress</div>
+            </div>
+            <div class="ht-line"></div>
+            <div class="ht-node">
+              <div class="ht-circle pending">4</div>
+              <div class="ht-label" style="color:rgba(255,255,255,0.7);">Selesai</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail Body -->
+      <div class="s3-body">
+        <div class="s3-scroll">
+          <!-- FABs -->
+          <div class="fab-row">
+            <button class="fab fab-primary">
+              <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 11.9 19.79 19.79 0 0 1 1.61 3.27 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72"/></svg>
+              Contact Client
+            </button>
+            <button class="fab fab-sec">
+              <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="#0F172A" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              Location Card
+            </button>
+          </div>
+
+          <!-- Checklist -->
+          <div style="font-size:9px;font-weight:800;color:var(--navy);margin-bottom:4px;">Task Checklist</div>
+          <div>
+            <div class="chk-item">
+              <div class="chkbox checked"><svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <span class="chklbl checked">Persiapan</span>
+              <div class="badge badge-green" style="margin-left:auto;">Persiapan</div>
+            </div>
+            <div class="chk-item">
+              <div class="chkbox checked"><svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <span class="chklbl checked">Setup Alat</span>
+              <div class="badge badge-yellow" style="margin-left:auto;">Setup Alat</div>
+            </div>
+            <div class="chk-item">
+              <div class="chkbox checked"><svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <span class="chklbl checked">Sound Check</span>
+              <div class="badge badge-green" style="margin-left:auto;">Selesai</div>
+            </div>
+            <div class="chk-item">
+              <div class="chkbox"></div>
+              <span class="chklbl">Event Berlangsung</span>
+              <div class="badge badge-orange" style="margin-left:auto;">Berlangsung</div>
+            </div>
+            <div class="chk-item">
+              <div class="chkbox"></div>
+              <span class="chklbl">Pembongkaran</span>
+              <div class="badge badge-blue" style="margin-left:auto;">Selesai</div>
+            </div>
+          </div>
+
+          <div style="height:1px;background:var(--s100);margin:8px 0;"></div>
+          <div style="font-size:9px;font-weight:600;color:var(--navy);">PIC / Client</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+            <span style="font-size:9px;color:var(--s600);">PT Maju Bersama</span>
+            <div style="width:28px;height:28px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07"/></svg>
+            </div>
+          </div>
+
+          <div style="margin-top:10px;background:rgba(249,115,22,0.05);border:1px solid rgba(249,115,22,0.15);border-radius:10px;padding:8px;display:flex;align-items:center;gap:8px;">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="var(--orange)" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07"/></svg>
+            <span style="font-size:8px;font-weight:600;color:var(--orange);">Contact Client Button</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sticky bottom -->
+      <div class="sticky-bar">
+        <button class="btn-orange" style="border-radius:12px;padding:11px;font-size:11px;box-shadow:0 4px 14px rgba(249,115,22,0.35);">Update Progress</button>
+      </div>
+    </div>
+    <div class="caption">Smooth gradients, premium<br/>SaaS mobile app style.</div>
+  </div>
+
+</div><!-- /row 1 -->
+
+<!-- ═══════ ROW 2: SCREENS 4–6 ═══════ -->
+<div class="row">
+
+  <!-- ───── SCREEN 4: CHECK-IN ───── -->
+  <div class="screen-wrap">
+    <div class="screen-section">CHECK-IN LOKASI</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="sb-time">9:41</span>
+        <span class="sb-icons">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="white"><rect x="0" y="4" width="2" height="4" rx="1"/><rect x="3" y="2.5" width="2" height="5.5" rx="1"/><rect x="6" y="1" width="2" height="7" rx="1"/></svg>
+          <svg width="18" height="8" viewBox="0 0 18 8" fill="white"><rect x="0" y="1" width="14" height="6" rx="2" fill="none" stroke="white" stroke-width="1"/><rect x="1.5" y="2.5" width="9" height="3" rx="1"/><rect x="15" y="3" width="2" height="2" rx="1"/></svg>
+        </span>
+      </div>
+
+      <!-- Map -->
+      <div class="s4-map">
+        <div class="map-bg"></div>
+        <!-- Road grid simulation -->
+        <div class="map-roads">
+          <div class="road-h" style="top:30%"></div>
+          <div class="road-h" style="top:55%"></div>
+          <div class="road-h" style="top:78%"></div>
+          <div class="road-v" style="left:25%"></div>
+          <div class="road-v" style="left:60%"></div>
+          <div class="road-v" style="left:80%"></div>
+          <div class="road-h2" style="top:42%"></div>
+          <div class="road-h2" style="top:67%"></div>
+          <div class="road-v2" style="left:40%"></div>
+        </div>
+
+        <!-- Geofence -->
+        <div class="geofence">
+          <div class="geofence-inner">
+            <div class="location-pin">📍</div>
+          </div>
+        </div>
+
+        <!-- Top label -->
+        <div class="map-chip">📍 Geofence · Hotel Mulia Jakarta</div>
+
+        <!-- Zoom btns -->
+        <div class="map-btns">
+          <div class="map-btn">+</div>
+          <div class="map-btn">−</div>
+        </div>
+
+        <!-- Distance tag -->
+        <div class="dist-tag">
+          <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="var(--orange)" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/></svg>
+          <span>📍 Geofence &nbsp; <span style="color:var(--green);font-weight:800;">Distance counter</span></span>
+        </div>
+
+        <!-- Back btn -->
+        <div style="position:absolute;top:30px;left:8px;width:26px;height:26px;border-radius:50%;background:white;box-shadow:0 2px 8px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10;">
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#0F172A" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+      </div>
+
+      <!-- Bottom Sheet -->
+      <div class="s4-sheet">
+        <div class="sheet-handle"></div>
+        <div style="font-size:12px;font-weight:800;color:var(--navy);margin-bottom:6px;">Smart Location</div>
+        <div style="font-size:10px;font-weight:700;color:var(--navy);margin-bottom:6px;">Wedding Andi & Sinta</div>
+        <div class="info-r">
+          <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          <div><span style="font-weight:600;color:var(--navy);">Grand Ballroom</span><br/><span style="font-size:7px;color:var(--s400);">Jl. Gatot Subroto Kav.2</span></div>
+        </div>
+        <div style="height:1px;background:var(--s100);margin:8px 0;"></div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <div style="flex:1;background:var(--s50);border-radius:8px;padding:6px;border:1px solid var(--s200);text-align:center;">
+            <div style="font-size:9px;font-weight:800;color:var(--navy);">45 m</div>
+            <div style="font-size:7px;color:var(--s400);">Jarak Anda</div>
+          </div>
+          <div style="flex:1;background:rgba(16,185,129,0.1);border-radius:8px;padding:6px;border:1px solid rgba(16,185,129,0.2);text-align:center;">
+            <div style="font-size:9px;font-weight:800;color:var(--green);">✓ Dalam Area</div>
+            <div style="font-size:7px;color:var(--s400);">Geofence Aktif</div>
+          </div>
+        </div>
+        <button class="btn-orange" style="border-radius:12px;padding:12px;font-size:12px;">📍 Check-in Sekarang</button>
+        <div style="font-size:7px;color:var(--s400);text-align:center;margin-top:5px;">Lokasi diverifikasi otomatis via GPS</div>
+      </div>
+    </div>
+    <div class="caption">Modern GPS attendance application design, Google Maps inspired.<br/>Floating card navigation</div>
+  </div>
+
+  <!-- ───── SCREEN 5: DOKUMENTASI ───── -->
+  <div class="screen-wrap">
+    <div class="screen-section">DOKUMENTASI EVENT</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="sb-time">9:41</span>
+        <span class="sb-icons">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="white"><rect x="0" y="4" width="2" height="4" rx="1"/><rect x="3" y="2.5" width="2" height="5.5" rx="1"/><rect x="6" y="1" width="2" height="7" rx="1"/></svg>
+          <svg width="18" height="8" viewBox="0 0 18 8" fill="white"><rect x="0" y="1" width="14" height="6" rx="2" fill="none" stroke="white" stroke-width="1"/><rect x="1.5" y="2.5" width="9" height="3" rx="1"/><rect x="15" y="3" width="2" height="2" rx="1"/></svg>
+        </span>
+      </div>
+
+      <div class="s5-hdr">
+        <div class="s2-title">Dokumentasi Event</div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item active">Foto</div>
+        <div class="tab-item">Video</div>
+      </div>
+      <div class="s5-toolbar">
+        <div class="mini-search">
+          <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span>Search</span>
+        </div>
+        <div class="filter-ico"><svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="#475569" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg></div>
+        <div class="filter-ico"><svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="#475569" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+      </div>
+
+      <!-- Photo grid -->
+      <div style="overflow-y:auto;height:calc(100% - 185px);padding:6px;background:var(--bg);padding-bottom:60px;">
+        <!-- Row labels -->
+        <div style="display:flex;gap:4px;margin-bottom:4px;">
+          <div style="font-size:7px;font-weight:700;color:var(--s500);">Upload</div>
+          <div style="flex:1;"></div>
+          <div style="font-size:7px;font-weight:700;color:var(--orange);">Grid view</div>
+        </div>
+        <div class="photo-grid">
+          <!-- Tall col left -->
+          <div class="photo-cell h2 pg1">💑</div>
+          <!-- Right col 2 cells -->
+          <div class="photo-cell h1 pg2">🎤</div>
+          <div class="photo-cell h1 pg3">💐</div>
+          <!-- Next row -->
+          <div class="photo-cell h1 pg4">🎵</div>
+          <div class="photo-cell h1 pg5">🔊</div>
+          <div class="photo-cell h2 pg6">🎊</div>
+          <!-- Bottom -->
+          <div class="photo-cell h1 pg7">💡</div>
+          <div class="photo-cell h1 pg8">🎬</div>
+        </div>
+        <!-- Upload button -->
+        <div style="margin-top:6px;display:flex;flex-direction:column;align-items:center;">
+          <div class="upload-cell" style="width:100%;">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="var(--orange)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span>Tambah Foto Baru</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Nav -->
+      <div class="bnav">
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div><span class="ni-lbl">Beranda</span></div>
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></div><span class="ni-lbl">Tugas</span></div>
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div><span class="ni-lbl">Check-In</span></div>
+        <div class="ni active"><div class="ni-dot"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#F97316" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div><span class="ni-lbl">Galeri</span></div>
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="ni-lbl">Profil</span></div>
+      </div>
+    </div>
+    <div class="caption">Modern event documentation gallery.<br/>Inspired by Google Photos and Dropbox</div>
+  </div>
+
+  <!-- ───── SCREEN 6: RIWAYAT TUGAS ───── -->
+  <div class="screen-wrap">
+    <div class="screen-section">RIWAYAT TUGAS</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="sb-time">9:41</span>
+        <span class="sb-icons">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="white"><rect x="0" y="4" width="2" height="4" rx="1"/><rect x="3" y="2.5" width="2" height="5.5" rx="1"/><rect x="6" y="1" width="2" height="7" rx="1"/></svg>
+          <svg width="18" height="8" viewBox="0 0 18 8" fill="white"><rect x="0" y="1" width="14" height="6" rx="2" fill="none" stroke="white" stroke-width="1"/><rect x="1.5" y="2.5" width="9" height="3" rx="1"/><rect x="15" y="3" width="2" height="2" rx="1"/></svg>
+        </span>
+      </div>
+
+      <div class="s2-hdr">
+        <div class="s2-title">Riwayat Tugas</div>
+      </div>
+
+      <!-- Toolbar -->
+      <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:white;border-bottom:1px solid var(--s100);">
+        <div style="flex:1;display:flex;align-items:center;gap:5px;background:var(--s50);border-radius:8px;padding:5px 8px;border:1px solid var(--s200);">
+          <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span style="font-size:8px;color:var(--s400);">Advanced Search</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:3px;background:var(--s50);border-radius:8px;padding:5px 8px;border:1px solid var(--s200);cursor:pointer;">
+          <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="#475569" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          <span style="font-size:8px;color:var(--s600);font-weight:600;">Filter</span>
+        </div>
+      </div>
+
+      <!-- Filter chips -->
+      <div style="display:flex;gap:4px;padding:6px 10px;background:white;border-bottom:1px solid var(--s100);overflow-x:auto;">
+        <div style="background:var(--orange);color:white;border-radius:999px;padding:3px 9px;font-size:7px;font-weight:700;white-space:nowrap;">Rating Badge Ing.</div>
+        <div style="background:var(--s50);color:var(--s500);border-radius:999px;padding:3px 9px;font-size:7px;font-weight:600;border:1px solid var(--s200);white-space:nowrap;">Performance Score</div>
+        <div style="background:var(--s50);color:var(--s500);border-radius:999px;padding:3px 9px;font-size:7px;font-weight:600;border:1px solid var(--s200);white-space:nowrap;">Infinite Scroll</div>
+      </div>
+
+      <div style="overflow-y:auto;height:calc(100% - 178px);padding:8px 10px;background:var(--bg);padding-bottom:60px;">
+        <div class="s1-scroll" style="height:100%;">
+
+          <!-- Card 1 -->
+          <div class="hist-card">
+            <div class="hc-thumb pg1">💍</div>
+            <div class="hc-body">
+              <div class="hc-name">Wedding Andi<br/>& Sinta</div>
+              <div class="info-r" style="margin-bottom:2px;"><svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg><span style="font-size:7px;">Grade</span></div>
+              <div class="info-r" style="margin-bottom:2px;"><svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg><span style="font-size:7px;">Senin, 09 Maret 2026</span></div>
+              <div class="info-r" style="margin-bottom:4px;"><svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/></svg><span style="font-size:7px;">Contact Mwainny 2026</span></div>
+              <div class="hc-badges">
+                <div class="star-badge">⭐ 5.0</div>
+                <div class="badge badge-green" style="font-size:7px;">Selesai</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="hist-card">
+            <div class="hc-thumb pg3">🏢</div>
+            <div class="hc-body">
+              <div class="hc-name">Corporate Gathering<br/>PT Maju</div>
+              <div class="info-r" style="margin-bottom:2px;"><svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg><span style="font-size:7px;">Sabtu, 28 February 2026</span></div>
+              <div class="info-r" style="margin-bottom:4px;"><svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg><span style="font-size:7px;">Shangri-La, Jakarta Pusat</span></div>
+              <div class="hc-badges">
+                <div class="star-badge">⭐ 4.0</div>
+                <div class="badge badge-green" style="font-size:7px;">Selesai</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="hist-card">
+            <div class="hc-thumb pg5">🎵</div>
+            <div class="hc-body">
+              <div class="hc-name">Live Music Event</div>
+              <div class="info-r" style="margin-bottom:2px;"><svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg><span style="font-size:7px;">Senin, 10 February 2026</span></div>
+              <div class="info-r" style="margin-bottom:4px;"><svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg><span style="font-size:7px;">Istora Senayan, Jakarta</span></div>
+              <div class="hc-badges">
+                <div class="star-badge">⭐ 4.0</div>
+                <div class="badge badge-red" style="font-size:7px;">Dibatalkan</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Bottom Nav -->
+      <div class="bnav">
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div><span class="ni-lbl">Beranda</span></div>
+        <div class="ni active"><div class="ni-dot"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#F97316" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></div><span class="ni-lbl">Tugas</span></div>
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div><span class="ni-lbl">Check-In</span></div>
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div><span class="ni-lbl">Galeri</span></div>
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="ni-lbl">Profil</span></div>
+      </div>
+    </div>
+    <div class="caption">Professional productivity application design, enterprise dashboard style. Orany theme</div>
+  </div>
+
+</div><!-- /row 2 -->
+
+<!-- ═══════ ROW 3: SCREENS 7–9 ═══════ -->
+<div class="row">
+
+  <!-- ───── SCREEN 7: NOTIFIKASI ───── -->
+  <div class="screen-wrap">
+    <div class="screen-section">NOTIFIKASI</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="sb-time">9:41</span>
+        <span class="sb-icons">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="white"><rect x="0" y="4" width="2" height="4" rx="1"/><rect x="3" y="2.5" width="2" height="5.5" rx="1"/><rect x="6" y="1" width="2" height="7" rx="1"/></svg>
+          <svg width="18" height="8" viewBox="0 0 18 8" fill="white"><rect x="0" y="1" width="14" height="6" rx="2" fill="none" stroke="white" stroke-width="1"/><rect x="1.5" y="2.5" width="9" height="3" rx="1"/><rect x="15" y="3" width="2" height="2" rx="1"/></svg>
+        </span>
+      </div>
+
+      <div class="s2-hdr" style="padding-bottom:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:800;color:white;">Notification center</div>
+          <!-- Toggle -->
+          <div style="display:flex;align-items:center;gap:5px;">
+            <div style="width:28px;height:16px;border-radius:999px;background:var(--orange);display:flex;align-items:center;justify-content:flex-end;padding:0 2px;cursor:pointer;">
+              <div style="width:12px;height:12px;border-radius:50%;background:white;"></div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <div style="display:flex;align-items:center;gap:4px;font-size:8px;color:var(--s400);">
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--orange);"></div>Priority Color
+          </div>
+          <div style="font-size:8px;color:var(--s400);">Swipe Action</div>
+          <div style="font-size:8px;color:var(--s400);">Read/Unread Indicator</div>
+        </div>
+        <!-- Search row -->
+        <div style="display:flex;align-items:center;gap:5px;margin-top:8px;">
+          <div style="flex:1;display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.1);border-radius:8px;padding:5px 8px;border:1px solid rgba(255,255,255,0.1);">
+            <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.5)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span style="font-size:8px;color:rgba(255,255,255,0.4);">Search notifications...</span>
+          </div>
+          <div style="width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.6)" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          </div>
+          <div style="width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.6)" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div style="overflow-y:auto;height:calc(100% - 180px);background:var(--bg);padding-bottom:60px;">
+        <div class="s1-scroll" style="height:100%;">
+
+          <!-- Group: 15-mei -->
+          <div class="notif-grp">15-Mei</div>
+
+          <div class="notif-row unread">
+            <div class="notif-ico" style="background:rgba(249,115,22,0.1);">📋</div>
+            <div class="notif-body">
+              <div class="notif-title">Tugas baru diberikan</div>
+              <div class="notif-desc">Anda dan log dsould application verifikasi.</div>
+              <div class="notif-time">08:45a</div>
+            </div>
+            <div class="unread-dot" style="background:var(--orange);"></div>
+          </div>
+
+          <div class="notif-row unread">
+            <div class="notif-ico" style="background:rgba(59,130,246,0.1);">📍</div>
+            <div class="notif-body">
+              <div class="notif-title">Update event</div>
+              <div class="notif-desc">Admin check event update muture update event.</div>
+              <div class="notif-time">09:12a</div>
+            </div>
+            <div class="unread-dot" style="background:var(--blue);"></div>
+          </div>
+
+          <div class="notif-row unread">
+            <div class="notif-ico" style="background:rgba(16,185,129,0.1);">✅</div>
+            <div class="notif-body">
+              <div class="notif-title">Pengingat check-in</div>
+              <div class="notif-desc">Pengingat check-in pembayarannya berhasil event.</div>
+              <div class="notif-time">10:00a</div>
+            </div>
+            <div class="unread-dot" style="background:var(--green);"></div>
+          </div>
+
+          <div class="notif-row unread">
+            <div class="notif-ico" style="background:rgba(245,158,11,0.1);">💳</div>
+            <div class="notif-body">
+              <div class="notif-title">Pembayaran diterima</div>
+              <div class="notif-desc">Pembayaran check-in pembayaraan berhasil event.</div>
+              <div class="notif-time">11:30a</div>
+            </div>
+            <div class="unread-dot" style="background:var(--amber);"></div>
+          </div>
+
+          <div class="swipe-hint">← Geser untuk tindakan &nbsp;|&nbsp; Geser →</div>
+
+          <!-- Group: 13-do -->
+          <div class="notif-grp">13-do</div>
+
+          <div class="notif-row">
+            <div class="notif-ico" style="background:rgba(139,92,246,0.1);">📢</div>
+            <div class="notif-body">
+              <div class="notif-title">Pengumuman</div>
+              <div class="notif-desc">Pengumuman dan Pengumumannnya.</div>
+              <div class="notif-time">16:00p</div>
+            </div>
+            <div class="unread-dot" style="background:transparent;"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Bottom Nav -->
+      <div class="bnav">
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div><span class="ni-lbl">Beranda</span></div>
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></div><span class="ni-lbl">Tugas</span></div>
+        <div class="ni active"><div class="ni-dot"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#F97316" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><span class="ni-lbl">Notif</span></div>
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div><span class="ni-lbl">Galeri</span></div>
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="ni-lbl">Profil</span></div>
+      </div>
+    </div>
+    <div class="caption">Inspired by Slack and Microsoft Teams, modern minimal layout.</div>
+  </div>
+
+  <!-- ───── SCREEN 8: PROFIL PENGGUNA ───── -->
+  <div class="screen-wrap">
+    <div class="screen-section">PROFIL PENGGUNA</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="sb-time">9:41</span>
+        <span class="sb-icons">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="white"><rect x="0" y="4" width="2" height="4" rx="1"/><rect x="3" y="2.5" width="2" height="5.5" rx="1"/><rect x="6" y="1" width="2" height="7" rx="1"/></svg>
+          <svg width="18" height="8" viewBox="0 0 18 8" fill="white"><rect x="0" y="1" width="14" height="6" rx="2" fill="none" stroke="white" stroke-width="1"/><rect x="1.5" y="2.5" width="9" height="3" rx="1"/><rect x="15" y="3" width="2" height="2" rx="1"/></svg>
+        </span>
+      </div>
+
+      <div class="s8-hdr">
+        <div class="s8-topbar">
+          <div class="back-btn"><svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></div>
+          <div style="font-size:12px;font-weight:800;color:white;">Profil Pengguna</div>
+          <div class="back-btn"><svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2"/></svg></div>
+        </div>
+        <!-- Centered Avatar in header -->
+        <div style="text-align:center;margin-top:4px;">
+          <div class="profile-ava" style="position:static;margin:0 auto;">AS</div>
+        </div>
+      </div>
+
+      <div class="s8-body">
+        <div class="s8-scroll">
+          <!-- Profile card -->
+          <div class="profile-float" style="margin-top:8px;">
+            <div style="font-size:14px;font-weight:800;color:var(--navy);margin-top:4px;">Andi Setiawan</div>
+            <div style="font-size:8px;color:var(--s500);margin-top:2px;">Large Profile Card</div>
+
+            <!-- Analytics -->
+            <div style="font-size:9px;font-weight:800;color:var(--navy);margin-top:10px;margin-bottom:6px;text-align:left;">Performance Analytics</div>
+            <div class="analytics-row">
+              <div class="analytics-item">
+                <div style="font-size:14px;margin-bottom:3px;">🏆</div>
+                <div class="anal-val">3 Thn</div>
+                <div class="anal-lbl">Pengalaman</div>
+              </div>
+              <div class="analytics-item">
+                <div style="font-size:14px;margin-bottom:3px;">⭐</div>
+                <div class="anal-val">4.8</div>
+                <div class="anal-lbl">Rating</div>
+              </div>
+              <div class="analytics-item">
+                <div style="font-size:14px;margin-bottom:3px;">✅</div>
+                <div class="anal-val">12</div>
+                <div class="anal-lbl">Tugas Selesai</div>
+              </div>
+            </div>
+
+            <!-- Skill Tags -->
+            <div style="font-size:9px;font-weight:800;color:var(--navy);margin-top:10px;margin-bottom:5px;text-align:left;">Skill Tags</div>
+            <div class="skill-tags">
+              <div class="skill-tag">🎛️ &lt; and tag</div>
+              <div class="skill-tag">🎚️ Mixing</div>
+              <div class="skill-tag">🎙️</div>
+              <div class="skill-tag">★★★★★</div>
+            </div>
+          </div>
+
+          <!-- Menu -->
+          <div class="menu-card">
+            <div class="mitem">
+              <div class="mico"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#0F172A" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></div>
+              <span class="mlabel">Account settings</span>
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#CBD5E1" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="mitem">
+              <div class="mico"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#0F172A" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+              <span class="mlabel">Payment information</span>
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#CBD5E1" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="mitem">
+              <div class="mico"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#0F172A" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+              <span class="mlabel">Settings Menu</span>
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#CBD5E1" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+
+          <!-- Logout row -->
+          <div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:12px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.1);margin-top:8px;cursor:pointer;">
+            <div style="width:28px;height:28px;border-radius:8px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;">
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#EF4444" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </div>
+            <span style="font-size:10px;font-weight:700;color:var(--red);">Keluar</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Nav -->
+      <div class="bnav">
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div><span class="ni-lbl">Beranda</span></div>
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></div><span class="ni-lbl">Tugas</span></div>
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div><span class="ni-lbl">Check-In</span></div>
+        <div class="ni"><div class="ni-ico"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div><span class="ni-lbl">Galeri</span></div>
+        <div class="ni active"><div class="ni-dot"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#F97316" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="ni-lbl">Profil</span></div>
+      </div>
+    </div>
+    <div class="caption">Modern SaaS mobile application design, LinkedIn Premium inspired. Clean professional layout.</div>
+  </div>
+
+  <!-- ───── SCREEN 9: NAVIGATION DRAWER ───── -->
+  <div class="screen-wrap">
+    <div class="screen-section">NAVIGATION DRAWER</div>
+    <div class="phone">
+      <!-- No status bar needed as drawer is an overlay -->
+      <div style="position:absolute;top:0;left:0;right:0;z-index:60;display:flex;justify-content:space-between;padding:28px 12px 4px;">
+        <span style="font-size:7px;font-weight:800;color:white;">9:41</span>
+        <span style="display:flex;align-items:center;gap:3px;">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="white"><rect x="0" y="4" width="2" height="4" rx="1"/><rect x="3" y="2.5" width="2" height="5.5" rx="1"/><rect x="6" y="1" width="2" height="7" rx="1"/></svg>
+          <svg width="18" height="8" viewBox="0 0 18 8" fill="white"><rect x="0" y="1" width="14" height="6" rx="2" fill="none" stroke="white" stroke-width="1"/><rect x="1.5" y="2.5" width="9" height="3" rx="1"/><rect x="15" y="3" width="2" height="2" rx="1"/></svg>
+        </span>
+      </div>
+
+      <div class="s9">
+        <div class="s9-glow1"></div>
+        <div class="s9-glow2"></div>
+
+        <!-- Logo -->
+        <div class="s9-logo">
+          <div class="s9-logo-mark">FND</div>
+          <div>
+            <div class="s9-co-name">FND Production</div>
+            <div class="s9-co-sub">EVENT SPECIALIST</div>
+          </div>
+        </div>
+
+        <div class="s9-divider"></div>
+
+        <!-- User snippet -->
+        <div class="s9-user">
+          <div class="s9-ava">AS</div>
+          <div>
+            <div class="s9-uname">Andi Setiawan</div>
+            <div class="s9-urole">Sound Engineer</div>
+          </div>
+          <div class="online-dot"></div>
+        </div>
+
+        <div class="s9-divider"></div>
+
+        <!-- Nav items -->
+        <div class="s9-nav">
+          <div class="s9-item active">
+            <svg width="14" height="14" fill="white" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            <span class="s9-lbl">Beranda</span>
+          </div>
+          <div class="s9-item">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span class="s9-lbl">Tugas Saya</span>
+            <div class="s9-badge">2</div>
+          </div>
+          <div class="s9-item">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span class="s9-lbl">Event</span>
+          </div>
+          <div class="s9-item">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <span class="s9-lbl">Checklist</span>
+          </div>
+          <div class="s9-item">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span class="s9-lbl">Dokumentasi</span>
+          </div>
+          <div class="s9-item">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span class="s9-lbl">Riwayat Tugas</span>
+          </div>
+          <div class="s9-item">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="s9-lbl">Notifikasi</span>
+            <div class="s9-badge">3</div>
+          </div>
+          <div class="s9-item">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span class="s9-lbl">Profil Saya</span>
+          </div>
+          <div class="s9-item">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="s9-lbl">Bantuan</span>
+          </div>
+        </div>
+
+        <!-- Logout -->
+        <div class="s9-logout">
+          <div class="logout-btn">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#EF4444" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span class="logout-lbl">Keluar</span>
+          </div>
+        </div>
+
+        <!-- right side glimpse of main content -->
+        <div style="position:absolute;top:0;right:0;width:36px;height:100%;background:rgba(15,23,42,0.5);backdrop-filter:blur(4px);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:14px;border-left:1px solid rgba(255,255,255,0.05);">
+          <div style="font-size:7px;color:rgba(255,255,255,0.2);writing-mode:vertical-lr;letter-spacing:2px;">Today's</div>
+          <div style="font-size:7px;color:rgba(255,255,255,0.2);writing-mode:vertical-lr;letter-spacing:2px;">Tasks</div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">Inspired by Stripe Dashboard<br/>and Linear App.</div>
+  </div>
+
+</div><!-- /row 3 -->
+
+</div><!-- /page -->
+</body>
+</html>

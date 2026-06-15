@@ -1,117 +1,191 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { api } from '../../services/api';
+import { EmptyState, FndHeader } from '../../components/FndUi';
+import { formatDate, getEventStatusMeta } from '../../utils/fnd';
 
-const NOTIFS = [
-  {
-    id: 1,
-    title: 'Tugas baru diberikan',
-    desc: 'Anda mendapat tugas baru Corporate Gathering PT Maju pada 26 Juni.',
-    time: 'Hari ini, 09.00',
-    icon: 'briefcase',
-    iconBg: 'bg-blue-100',
-    iconColor: '#2563EB',
-    isRead: false,
-  },
-  {
-    id: 2,
-    title: 'Update event',
-    desc: 'Wedding Andi & Sinta: informasi venue diperbarui. Cek detail.',
-    time: 'Hari ini, 08.30',
-    icon: 'calendar',
-    iconBg: 'bg-emerald-100',
-    iconColor: '#059669',
-    isRead: false,
-  },
-  {
-    id: 3,
-    title: 'Pengingat check-in',
-    desc: 'Jangan lupa lakukan check-in pada event hari ini pukul 7 pagi.',
-    time: 'Kemarin, 20.00',
-    icon: 'location',
-    iconBg: 'bg-orange-100',
-    iconColor: '#F59E0B',
-    isRead: true,
-  },
-  {
-    id: 4,
-    title: 'Pembayaran diterima',
-    desc: 'Honorarium dari event Seminar Nasional 2024 telah dikirimkan.',
-    time: 'Kemarin, 16.23',
-    icon: 'wallet',
-    iconBg: 'bg-purple-100',
-    iconColor: '#7C3AED',
-    isRead: true,
-  },
-  {
-    id: 5,
-    title: 'Pengumuman',
-    desc: 'Briefing crew untuk event besok jam 19.00 di basecamp FND Production.',
-    time: 'Kemarin, 17.00',
-    icon: 'megaphone',
-    iconBg: 'bg-red-100',
-    iconColor: '#EF4444',
-    isRead: true,
-  },
-];
+const FILTERS = ['Semua', 'Belum Dibaca'];
 
-export const NotifikasiCrewScreen = () => {
+export const NotifikasiCrewScreen = ({ navigation }: any) => {
+  const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState('Semua');
-  const unread = NOTIFS.filter(n => !n.isRead).length;
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const filtered = filter === 'Belum Dibaca'
-    ? NOTIFS.filter(n => !n.isRead)
-    : NOTIFS;
+  const fetchTasks = async () => {
+    const response = await api.get('/events/assigned');
+    if (response.data?.success) setTasks(response.data.data || []);
+  };
+
+  useEffect(() => {
+    fetchTasks().catch(() => null);
+  }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchTasks().catch(() => null);
+    setRefreshing(false);
+  };
+
+  const notifications = useMemo(() => {
+    const generated = tasks.slice(0, 8).map((task, index) => {
+      const status = getEventStatusMeta(task.status);
+      return {
+        id: `task-${task.id}`,
+        title: index === 0 ? 'Tugas baru diberikan' : 'Update event',
+        desc: `${task.name} berstatus ${status.label}. Cek detail pekerjaan Anda.`,
+        time: formatDate(task.event_date),
+        icon: index === 0 ? 'briefcase' : 'calendar',
+        iconBg: index === 0 ? 'bg-blue-100' : 'bg-emerald-100',
+        iconColor: index === 0 ? '#2563EB' : '#059669',
+        isRead: index > 1,
+        event: task,
+      };
+    });
+
+    return [
+      ...generated,
+      {
+        id: 'announcement',
+        title: 'Pengumuman',
+        desc: 'Briefing crew untuk event berikutnya jam 19.00 di basecamp FND Production.',
+        time: 'Admin',
+        icon: 'megaphone',
+        iconBg: 'bg-orange-100',
+        iconColor: '#F97316',
+        isRead: false,
+      },
+    ];
+  }, [tasks]);
+
+  const unread = notifications.filter((item) => !item.isRead).length;
+  const filtered = filter === 'Belum Dibaca' ? notifications.filter((item) => !item.isRead) : notifications;
 
   return (
-    <View className="flex-1 bg-white">
-      {/* Filter Row */}
-      <View className="flex-row items-center px-6 py-3 border-b border-slate-100">
-        {['Semua', 'Belum Dibaca'].map((f) => (
-          <TouchableOpacity
-            key={f}
-            onPress={() => setFilter(f)}
-            className={`mr-4 py-1.5 px-4 rounded-full ${filter === f ? 'bg-primary' : 'bg-slate-100'}`}
-          >
-            <Text className={`font-semibold text-sm ${filter === f ? 'text-white' : 'text-slate-500'}`}>
-              {f}{f === 'Belum Dibaca' && unread > 0 ? ` (${unread})` : ''}
-            </Text>
+    <View className="flex-1 bg-crewBg">
+      {/* Redesigned Notification Header with Toggle Switch */}
+      <View style={{ paddingTop: insets.top + 10 }} className="bg-primary px-5 pb-5">
+        <View className="mb-3 flex-row items-center justify-between">
+          <Text className="text-base font-extrabold text-white">Notification center</Text>
+          
+          {/* Simulated Toggle Switch */}
+          <View className="h-6 w-11 rounded-full bg-crewAccent flex-row items-center justify-end px-0.5">
+            <View className="h-5 w-5 rounded-full bg-white shadow-sm" />
+          </View>
+        </View>
+
+        {/* Subtitle Indicators */}
+        <View className="flex-row gap-3 mb-4">
+          <View className="flex-row items-center">
+            <View className="h-2 w-2 rounded-full bg-crewAccent mr-1" />
+            <Text className="text-[9px] font-bold text-slate-400">Priority Color</Text>
+          </View>
+          <Text className="text-[9px] font-bold text-slate-400">Swipe Action</Text>
+          <Text className="text-[9px] font-bold text-slate-400">Read/Unread Indicator</Text>
+        </View>
+
+        {/* Search & Actions Bar */}
+        <View className="flex-row items-center gap-2">
+          <View className="flex-1 flex-row items-center bg-white/10 border border-white/10 rounded-xl px-3 py-1.5">
+            <Ionicons name="search-outline" size={14} color="rgba(255,255,255,0.5)" />
+            <TextInput
+              placeholder="Search notifications..."
+              placeholderTextColor="rgba(255,255,255,0.4)"
+              className="flex-1 ml-2 text-white text-xs p-0 font-medium"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+          <TouchableOpacity className="h-8 w-8 items-center justify-center rounded-xl bg-white/10 border border-white/10">
+            <Ionicons name="funnel-outline" size={14} color="#FFFFFF" />
           </TouchableOpacity>
-        ))}
+          <TouchableOpacity className="h-8 w-8 items-center justify-center rounded-xl bg-white/10 border border-white/10">
+            <Ionicons name="options-outline" size={14} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F97316" />}
+        contentContainerStyle={{ paddingBottom: 110 }}
         showsVerticalScrollIndicator={false}
       >
-        {filtered.map((notif) => (
-          <TouchableOpacity
-            key={notif.id}
-            className={`flex-row items-start px-6 py-4 border-b border-slate-50 ${!notif.isRead ? 'bg-blue-50/40' : 'bg-white'}`}
-          >
-            {/* Icon */}
-            <View className={`w-11 h-11 ${notif.iconBg} rounded-full items-center justify-center mr-4 mt-0.5`}>
-              <Ionicons name={notif.icon as any} size={20} color={notif.iconColor} />
+        {filtered.length === 0 ? (
+          <View className="px-5 pt-6">
+            <EmptyState icon="notifications-outline" title="Belum ada notifikasi" />
+          </View>
+        ) : (
+          <>
+            {/* Timestamp Group 1: 15-Mei */}
+            <View className="px-4 py-2.5">
+              <Text className="text-[9px] font-black tracking-wider text-slate-400 text-uppercase">15-MEI</Text>
             </View>
 
-            {/* Content */}
-            <View className="flex-1">
-              <View className="flex-row justify-between items-start mb-1">
-                <Text className={`text-sm flex-1 mr-2 ${notif.isRead ? 'text-slate-700 font-medium' : 'text-primary font-bold'}`}>
-                  {notif.title}
-                </Text>
-                {!notif.isRead && (
-                  <View className="w-2 h-2 bg-accent rounded-full mt-1.5" />
-                )}
-              </View>
-              <Text className="text-slate-500 text-xs leading-5">{notif.desc}</Text>
-              <Text className="text-slate-400 text-[10px] mt-1.5">{notif.time}</Text>
+            {filtered.slice(0, 3).map((notif: any) => {
+              // Priority colors: Orange, Blue, Green
+              let priorityColor = '#F97316';
+              if (notif.title.toLowerCase().includes('update')) priorityColor = '#3B82F6';
+              if (notif.title.toLowerCase().includes('pengingat')) priorityColor = '#10B981';
+
+              return (
+                <TouchableOpacity
+                  key={notif.id}
+                  className={`mx-4 mb-2 flex-row items-center rounded-2xl border border-slate-50 bg-white p-3 ${!notif.isRead ? 'bg-orange-50/10' : ''}`}
+                  style={{ elevation: 1 }}
+                  onPress={() => notif.event && navigation.navigate('DetailTugas', { taskId: notif.event.id, event: notif.event })}
+                >
+                  <View className={`mr-3.5 h-9 w-9 items-center justify-center rounded-xl bg-slate-50 border border-slate-100`}>
+                    <Ionicons name={notif.icon === 'briefcase' ? 'briefcase-outline' : notif.icon === 'calendar' ? 'calendar-outline' : 'megaphone-outline'} size={16} color={priorityColor} />
+                  </View>
+                  <View className="flex-1">
+                    <View className="flex-row items-start justify-between">
+                      <Text className="mr-3 flex-1 text-xs font-black text-primary">{notif.title}</Text>
+                      <View className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: priorityColor }} />
+                    </View>
+                    <Text className="mt-0.5 text-[10px] leading-4 text-slate-500" numberOfLines={1}>{notif.desc}</Text>
+                    <Text className="mt-1 text-[8px] font-bold text-slate-400">{notif.time}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+
+            {/* Swipe Indication Banner Widget */}
+            <View className="mx-4 my-2.5 rounded-xl bg-slate-100/60 p-2.5 items-center border border-slate-200/50">
+              <Text className="text-[9px] font-bold text-slate-500">← Swipe left to delete | Swipe right to read →</Text>
             </View>
-          </TouchableOpacity>
-        ))}
+
+            {/* Timestamp Group 2: 13-Do */}
+            <View className="px-4 py-2.5">
+              <Text className="text-[9px] font-black tracking-wider text-slate-400 text-uppercase">13-DO</Text>
+            </View>
+
+            {filtered.slice(3).map((notif: any) => (
+              <TouchableOpacity
+                key={notif.id}
+                className={`mx-4 mb-2 flex-row items-center rounded-2xl border border-slate-50 bg-white p-3 ${!notif.isRead ? 'bg-orange-50/10' : ''}`}
+                style={{ elevation: 1 }}
+                onPress={() => notif.event && navigation.navigate('DetailTugas', { taskId: notif.event.id, event: notif.event })}
+              >
+                <View className="mr-3.5 h-9 w-9 items-center justify-center rounded-xl bg-slate-50 border border-slate-100">
+                  <Ionicons name="megaphone-outline" size={16} color="#F59E0B" />
+                </View>
+                <View className="flex-1">
+                  <View className="flex-row items-start justify-between">
+                    <Text className="mr-3 flex-1 text-xs font-black text-primary">{notif.title}</Text>
+                    {!notif.isRead ? <View className="h-1.5 w-1.5 rounded-full bg-amber-500" /> : null}
+                  </View>
+                  <Text className="mt-0.5 text-[10px] leading-4 text-slate-500" numberOfLines={1}>{notif.desc}</Text>
+                  <Text className="mt-1 text-[8px] font-bold text-slate-400">{notif.time}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
       </ScrollView>
     </View>
   );
 };
-

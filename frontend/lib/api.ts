@@ -48,6 +48,7 @@ export async function fetchAPI<T = any>(endpoint: string, options: RequestInit =
   let response: Response
   try {
     response = await fetch(url, {
+      credentials: "include",
       ...options,
       headers,
       cache: options.cache ?? "no-store",
@@ -62,6 +63,15 @@ export async function fetchAPI<T = any>(endpoint: string, options: RequestInit =
     : await response.blob().catch(() => ({}))
 
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== "undefined") {
+      try {
+        const { clearClientSession } = await import("./session")
+        clearClientSession()
+        window.location.href = "/auth/login?expired=true"
+      } catch (e) {
+        console.error("Failed to redirect", e)
+      }
+    }
     const err: any = new Error((data as any)?.error || "Terjadi kesalahan pada server")
     err.status = response.status
     err.data = data

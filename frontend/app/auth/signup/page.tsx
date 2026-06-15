@@ -67,7 +67,7 @@ export default function SignupPage() {
           </div>
           <div className="space-y-2">
             <h1 className="text-3xl font-bold text-white">Berhasil!</h1>
-            <p className="text-slate-400">Akun Anda telah berhasil dibuat. Silakan login untuk melanjutkan.</p>
+            <p className="text-slate-400">Akun admin Anda telah berhasil dibuat. Silakan login untuk mengakses dashboard.</p>
           </div>
           <Button asChild className="w-full h-14 text-lg font-bold bg-primary hover:bg-primary/90 text-white rounded-2xl">
             <Link href="/auth/login">Masuk Sekarang</Link>
@@ -97,8 +97,8 @@ export default function SignupPage() {
             <span className="text-4xl font-black tracking-tighter text-primary">F</span>
             <span className="text-4xl font-black tracking-tighter text-white">ND</span>
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Daftar Sebagai Client</h1>
-          <p className="mt-2 text-slate-400">Buat akun untuk memesan jasa event lighting FND Production</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Daftar Akun Admin</h1>
+          <p className="mt-2 text-slate-400">Buat akun administrator untuk mengelola sistem FND Production</p>
         </div>
 
         <div className="bg-white/5 backdrop-blur-3xl border border-white/10 p-8 rounded-3xl shadow-2xl sm:p-10">
@@ -154,8 +154,8 @@ export default function SignupPage() {
               </div>
             </div>
 
-            {/* Role is always client for public signup */}
-            <input type="hidden" name="role" value="client" />
+            {/* Role is always admin for this signup page */}
+            <input type="hidden" name="role" value="admin" />
 
             <div className="space-y-2">
               <Label htmlFor="password" className="text-slate-300 ml-1">Password</Label>

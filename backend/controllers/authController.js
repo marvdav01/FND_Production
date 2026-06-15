@@ -89,20 +89,26 @@ export async function refresh(req, res) {
     return res.status(401).json({ success: false, error: 'Refresh token is required' })
   }
 
+  let activeSession
   try {
     verifyRefreshToken(refreshToken)
-    const activeSession = await findActiveRefreshToken(refreshToken)
+    activeSession = await findActiveRefreshToken(refreshToken)
     if (!activeSession) {
       return res.status(401).json({ success: false, error: 'Refresh token is invalid or expired' })
     }
+  } catch (error) {
+    return res.status(401).json({ success: false, error: 'Refresh token is invalid or expired' })
+  }
 
+  try {
     const user = publicUser(activeSession)
     await revokeRefreshToken(refreshToken)
     const tokens = await issueTokenPair(user, req)
 
     res.json({ success: true, data: tokenResponse(user, tokens) })
   } catch (error) {
-    return res.status(401).json({ success: false, error: 'Refresh token is invalid or expired' })
+    console.error('Refresh token rotation failed:', error)
+    return res.status(500).json({ success: false, error: 'Failed to refresh session' })
   }
 }
 
@@ -218,10 +224,11 @@ export async function uploadAvatar(req, res) {
 
   try {
     const [currentRows] = await pool.query('SELECT avatar_url FROM users WHERE id = ? LIMIT 1', [req.user.id])
+    const oldAvatarUrl = currentRows[0]?.avatar_url
     const avatarUrl = toPublicUploadUrl(req.file)
 
     await pool.query('UPDATE users SET avatar_url = ? WHERE id = ?', [avatarUrl, req.user.id])
-    removeLocalUpload(currentRows[0]?.avatar_url)
+    removeLocalUpload(oldAvatarUrl)
 
     const user = await findUserById(req.user.id)
     res.json({ success: true, data: publicUser(user), message: 'Avatar berhasil diperbarui' })
@@ -238,20 +245,27 @@ export async function uploadAvatarBase64(req, res) {
   }
 
   try {
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-    const mime = mimeType || 'image/jpeg'
-    if (!allowedTypes.includes(mime)) {
-      return res.status(400).json({ success: false, error: 'Format file tidak didukung' })
+    // Deteksi mime type dari header base64 terlebih dahulu
+    const headerMatch = image.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,/)
+    const detectedMime = headerMatch ? headerMatch[1].toLowerCase() : null
+    const rawMime = detectedMime || (mimeType ? mimeType.toLowerCase() : 'image/jpeg')
+
+    // Normalisasi: heic/heif dari iPhone → simpan sebagai jpg
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+    if (!allowedTypes.includes(rawMime)) {
+      return res.status(400).json({ success: false, error: 'Format file tidak didukung. Gunakan JPG, PNG, atau WebP.' })
     }
 
-    const base64Data = image.replace(/^data:image\/\w+;base64,/, '')
+    const finalMime = (rawMime === 'image/heic' || rawMime === 'image/heif') ? 'image/jpeg' : rawMime
+
+    const base64Data = image.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, '')
     const buffer = Buffer.from(base64Data, 'base64')
     if (buffer.length > 5 * 1024 * 1024) {
       return res.status(400).json({ success: false, error: 'Ukuran file maksimal 5MB' })
     }
 
     const extMap = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
-    const ext = extMap[mime] || 'jpg'
+    const ext = extMap[finalMime] || 'jpg'
     const filename = `avatar-u${req.user.id}-${Date.now()}.${ext}`
     const avatarDir = path.join(uploadRoot, 'avatars')
     fs.mkdirSync(avatarDir, { recursive: true })
@@ -259,14 +273,16 @@ export async function uploadAvatarBase64(req, res) {
     fs.writeFileSync(filepath, buffer)
 
     const [currentRows] = await pool.query('SELECT avatar_url FROM users WHERE id = ? LIMIT 1', [req.user.id])
+    const oldAvatarUrl = currentRows[0]?.avatar_url
     const avatarUrl = `/uploads/avatars/${filename}`
 
     await pool.query('UPDATE users SET avatar_url = ? WHERE id = ?', [avatarUrl, req.user.id])
-    removeLocalUpload(currentRows[0]?.avatar_url)
+    removeLocalUpload(oldAvatarUrl)
 
     const user = await findUserById(req.user.id)
     res.json({ success: true, data: publicUser(user), message: 'Avatar berhasil diperbarui' })
   } catch (error) {
+    console.error('uploadAvatarBase64 error:', error)
     res.status(500).json({ success: false, error: 'Failed to upload avatar' })
   }
 }
@@ -316,30 +332,51 @@ export async function getUsers(req, res) {
 
 export async function createUser(req, res) {
   const { name, email, password, role, phone } = req.body
+  const connection = await pool.getConnection()
   try {
+    await connection.beginTransaction()
+
     const hashed = await bcrypt.hash(password, 12)
-    const [result] = await pool.query(
+    const [result] = await connection.query(
       'INSERT INTO users (name, email, password, role, phone) VALUES (?, ?, ?, ?, ?)',
       [name, email, hashed, role, phone || null],
     )
 
+    if (role === 'crew') {
+      await connection.query(
+        'INSERT INTO crew (user_id, name, role, phone) VALUES (?, ?, ?, ?)',
+        [result.insertId, name, 'Technician', phone || null]
+      )
+    }
+
+    await connection.commit()
     const user = await findUserById(result.insertId)
     res.status(201).json({ success: true, data: publicUser(user), message: 'User berhasil dibuat' })
   } catch (error) {
+    await connection.rollback()
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ success: false, error: 'Email already exists' })
     }
     res.status(500).json({ success: false, error: 'Failed to create user' })
+  } finally {
+    connection.release()
   }
 }
 
 export async function updateUser(req, res) {
   const userId = Number(req.params.id)
   const { name, email, password, role, phone } = req.body
+  const connection = await pool.getConnection()
 
   try {
-    const existing = await findUserById(userId)
-    if (!existing) return res.status(404).json({ success: false, error: 'User not found' })
+    await connection.beginTransaction()
+
+    const [existingRows] = await connection.query('SELECT role, name, phone FROM users WHERE id = ?', [userId])
+    const existing = existingRows[0]
+    if (!existing) {
+      await connection.rollback()
+      return res.status(404).json({ success: false, error: 'User not found' })
+    }
 
     const updates = []
     const params = []
@@ -365,10 +402,67 @@ export async function updateUser(req, res) {
       params.push(await bcrypt.hash(password, 12))
     }
 
+    // Jika role berubah dari 'crew' ke yang lain
+    if (role !== undefined && existing.role === 'crew' && role !== 'crew') {
+      const [crewRows] = await connection.query('SELECT id FROM crew WHERE user_id = ?', [userId])
+      if (crewRows.length > 0) {
+        const crewId = crewRows[0].id
+        const [activeAssignments] = await connection.query(
+          `SELECT ec.id FROM event_crew ec
+           JOIN events e ON ec.event_id = e.id
+           WHERE ec.crew_id = ? AND e.status NOT IN ('selesai', 'cancel')`,
+          [crewId]
+        )
+        if (activeAssignments.length > 0) {
+          await connection.rollback()
+          return res.status(400).json({
+            success: false,
+            error: `Tidak dapat mengubah role. User ini terdaftar sebagai crew dan masih ditugaskan di ${activeAssignments.length} event aktif.`
+          })
+        }
+        await connection.query('DELETE FROM crew WHERE id = ?', [crewId])
+      }
+    }
+
     if (updates.length) {
       params.push(userId)
-      await pool.query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params)
+      await connection.query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params)
     }
+
+    // Jika role berubah dari non-crew ke 'crew'
+    if (role !== undefined && existing.role !== 'crew' && role === 'crew') {
+      const [crewRows] = await connection.query('SELECT id FROM crew WHERE user_id = ?', [userId])
+      if (crewRows.length === 0) {
+        await connection.query(
+          'INSERT INTO crew (user_id, name, role, phone) VALUES (?, ?, ?, ?)',
+          [userId, name !== undefined ? name : existing.name, 'Technician', phone !== undefined ? phone : existing.phone]
+        )
+      }
+    }
+
+    // Jika user saat ini adalah crew (atau diupdate menjadi crew) dan ada perubahan nama/phone
+    const isNowCrew = role !== undefined ? role === 'crew' : existing.role === 'crew'
+    if (isNowCrew && (name !== undefined || phone !== undefined)) {
+      const [crewRows] = await connection.query('SELECT id FROM crew WHERE user_id = ?', [userId])
+      if (crewRows.length > 0) {
+        const crewUpdates = []
+        const crewParams = []
+        if (name !== undefined) {
+          crewUpdates.push('name = ?')
+          crewParams.push(name)
+        }
+        if (phone !== undefined) {
+          crewUpdates.push('phone = ?')
+          crewParams.push(phone || null)
+        }
+        if (crewUpdates.length > 0) {
+          crewParams.push(userId)
+          await connection.query(`UPDATE crew SET ${crewUpdates.join(', ')} WHERE user_id = ?`, crewParams)
+        }
+      }
+    }
+
+    await connection.commit()
 
     if (password || role !== undefined) {
       await revokeUserRefreshTokens(userId)
@@ -377,10 +471,13 @@ export async function updateUser(req, res) {
     const user = await findUserById(userId)
     res.json({ success: true, data: publicUser(user), message: 'User berhasil diperbarui' })
   } catch (error) {
+    await connection.rollback()
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ success: false, error: 'Email already exists' })
     }
     res.status(500).json({ success: false, error: 'Failed to update user' })
+  } finally {
+    connection.release()
   }
 }
 
@@ -390,16 +487,48 @@ export async function deleteUser(req, res) {
     return res.status(400).json({ success: false, error: 'Tidak dapat menghapus akun sendiri' })
   }
 
+  const connection = await pool.getConnection()
   try {
-    const existing = await findUserById(userId)
-    if (!existing) return res.status(404).json({ success: false, error: 'User not found' })
+    await connection.beginTransaction()
+
+    const [userRows] = await connection.query('SELECT role, avatar_url FROM users WHERE id = ?', [userId])
+    const user = userRows[0]
+    if (!user) {
+      await connection.rollback()
+      return res.status(404).json({ success: false, error: 'User not found' })
+    }
+
+    // Jika user adalah crew, cek tugas aktif di event_crew
+    const [crewRows] = await connection.query('SELECT id FROM crew WHERE user_id = ?', [userId])
+    if (crewRows.length > 0) {
+      const crewId = crewRows[0].id
+      const [activeAssignments] = await connection.query(
+        `SELECT ec.id FROM event_crew ec
+         JOIN events e ON ec.event_id = e.id
+         WHERE ec.crew_id = ? AND e.status NOT IN ('selesai', 'cancel')`,
+        [crewId]
+      )
+      if (activeAssignments.length > 0) {
+        await connection.rollback()
+        return res.status(400).json({
+          success: false,
+          error: `User ini adalah crew yang masih ditugaskan di ${activeAssignments.length} event aktif. Selesaikan atau batalkan event terlebih dahulu.`
+        })
+      }
+      await connection.query('DELETE FROM crew WHERE id = ?', [crewId])
+    }
 
     await revokeUserRefreshTokens(userId)
-    removeLocalUpload(existing.avatar_url)
-    await pool.query('DELETE FROM users WHERE id = ?', [userId])
+    removeLocalUpload(user.avatar_url)
+    await connection.query('DELETE FROM users WHERE id = ?', [userId])
 
+    await connection.commit()
     res.json({ success: true, message: 'User berhasil dihapus' })
   } catch (error) {
+    await connection.rollback()
+    console.error('deleteUser error:', error)
     res.status(500).json({ success: false, error: 'Failed to delete user' })
+  } finally {
+    connection.release()
   }
 }

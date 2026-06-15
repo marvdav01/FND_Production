@@ -26,6 +26,30 @@ export const getAssetUrl = (url?: string | null) => {
   return `${BASE_URL.replace(/\/api\/?$/, '')}${url}`;
 };
 
+export { BASE_URL };
+
+export const getToken = () => AsyncStorage.getItem('token');
+
+// Upload file menggunakan native fetch (bukan axios) agar multipart boundary otomatis diisi
+export async function uploadFormData(path: string, formData: FormData): Promise<any> {
+  const token = await AsyncStorage.getItem('token');
+  const url = `${BASE_URL}${path}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      // TIDAK set Content-Type - browser/RN otomatis isi boundary multipart/form-data
+    },
+    body: formData,
+  });
+  const data = await response.json();
+  if (!response.ok || data?.success === false) {
+    const msg = data?.error || data?.message || `Error ${response.status}`;
+    throw new Error(msg);
+  }
+  return data;
+}
+
 export const api = axios.create({
   baseURL: BASE_URL,
   headers: {
@@ -65,6 +89,11 @@ api.interceptors.request.use(
     const token = await AsyncStorage.getItem('token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    // Jika Content-Type di-set undefined (sengaja dihapus untuk multipart upload),
+    // hapus dari headers agar React Native bisa set boundary multipart/form-data otomatis.
+    if (config.headers && config.headers['Content-Type'] === undefined) {
+      delete config.headers['Content-Type'];
     }
     return config;
   },

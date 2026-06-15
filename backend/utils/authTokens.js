@@ -23,7 +23,7 @@ export function publicUser(user) {
 
 export function signAccessToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role, name: user.name },
+    { id: user.id, email: user.email, role: user.role, name: user.name, jti: crypto.randomUUID() },
     accessSecret,
     { expiresIn: ACCESS_TOKEN_EXPIRES_IN },
   )
@@ -31,7 +31,7 @@ export function signAccessToken(user) {
 
 export function signRefreshToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role, type: 'refresh' },
+    { id: user.id, email: user.email, role: user.role, type: 'refresh', jti: crypto.randomUUID() },
     refreshSecret,
     { expiresIn: REFRESH_TOKEN_EXPIRES_IN },
   )

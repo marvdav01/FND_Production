@@ -59,6 +59,7 @@ export const EditProfileScreen = ({ navigation }: any) => {
               onChangeText={onChange}
               value={value}
               error={errors.name?.message as string}
+              icon="person-outline"
             />
           )}
           name="name"
@@ -76,6 +77,7 @@ export const EditProfileScreen = ({ navigation }: any) => {
               value={value}
               keyboardType="phone-pad"
               error={errors.phone?.message as string}
+              icon="call-outline"
             />
           )}
           name="phone"
@@ -86,6 +88,7 @@ export const EditProfileScreen = ({ navigation }: any) => {
             label="Email"
             value={user?.email}
             editable={false}
+            icon="mail-outline"
           />
           <Text className="text-xs text-gray-400 mt-1">Email digunakan untuk login dan tidak dapat diubah.</Text>
         </View>

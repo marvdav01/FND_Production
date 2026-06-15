@@ -1,25 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '../../services/api';
+import { api, getAssetUrl } from '../../services/api';
+import { EmptyState, FndHeader, ProgressBar, StatusBadge } from '../../components/FndUi';
+import { formatDate, getEventImage, getEventStatusMeta, getLocationParts } from '../../utils/fnd';
 
 const TABS = ['Semua', 'On Going', 'Selesai', 'Dibatalkan'];
-
-const STATUS_MAP: Record<string, string> = {
-  running: 'On Going',
-  deal: 'On Going',
-  done: 'Selesai',
-  selesai: 'Selesai',
-  cancel: 'Dibatalkan',
-  pending: 'Semua',
-  survey: 'Semua',
-};
-
-const STATUS_COLOR: Record<string, { bg: string; text: string }> = {
-  'On Going': { bg: 'bg-emerald-100', text: 'text-emerald-600' },
-  Selesai: { bg: 'bg-slate-100', text: 'text-slate-500' },
-  Dibatalkan: { bg: 'bg-red-100', text: 'text-red-600' },
-};
 
 export const EventSayaScreen = ({ navigation }: any) => {
   const [activeTab, setActiveTab] = useState('Semua');
@@ -53,10 +39,9 @@ export const EventSayaScreen = ({ navigation }: any) => {
     setRefreshing(false);
   };
 
-  const filtered = events.filter((e) => {
+  const filtered = events.filter((event) => {
     if (activeTab === 'Semua') return true;
-    const displayStatus = STATUS_MAP[e.status] || 'Semua';
-    return displayStatus === activeTab;
+    return getEventStatusMeta(event.status).eventTab === activeTab;
   });
 
   if (loading) {
@@ -69,76 +54,65 @@ export const EventSayaScreen = ({ navigation }: any) => {
 
   return (
     <View className="flex-1 bg-white">
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="border-b border-slate-100" contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+      <FndHeader title="Event Saya" onBack={() => navigation.getParent()?.navigate('Beranda')} />
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="max-h-[58px]" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12 }}>
         {TABS.map((tab) => (
           <TouchableOpacity
             key={tab}
             onPress={() => setActiveTab(tab)}
-            className={`mr-3 px-5 py-2 rounded-full ${activeTab === tab ? 'bg-primary' : 'bg-slate-100'}`}
+            className={`mr-2 rounded-md px-5 py-3 ${activeTab === tab ? 'bg-primary' : 'bg-slate-100'}`}
           >
-            <Text className={`font-semibold text-sm ${activeTab === tab ? 'text-white' : 'text-slate-500'}`}>{tab}</Text>
+            <Text className={`text-xs font-bold ${activeTab === tab ? 'text-white' : 'text-slate-500'}`}>{tab}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+        className="flex-1 px-5"
+        contentContainerStyle={{ paddingBottom: 104 }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2563EB" />}
       >
-        {filtered.map((event) => {
-          const displayStatus = STATUS_MAP[event.status] || event.status || 'Semua';
-          const statusStyle = STATUS_COLOR[displayStatus] || { bg: 'bg-slate-100', text: 'text-slate-500' };
+        {filtered.length === 0 ? (
+          <EmptyState icon="calendar-outline" title="Belum ada event" description="Booking baru akan muncul di sini setelah berhasil dikirim." />
+        ) : (
+          filtered.map((event) => {
+            const status = getEventStatusMeta(event.status);
+            const location = getLocationParts(event);
+            const image = getAssetUrl(getEventImage(event)) || getEventImage(event);
 
-          return (
-            <TouchableOpacity
-              key={event.id}
-              className="bg-white rounded-3xl mb-5 border border-slate-100 overflow-hidden"
-              style={{ elevation: 3, shadowColor: '#0F172A', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}
-              onPress={() => navigation.navigate('DetailEventClient', { eventId: event.id })}
-            >
-              <View className="h-24 bg-primary px-4 justify-center">
-                <Text className="text-white font-black text-2xl">FND</Text>
-                <Text className="text-blue-100 text-xs mt-1">{event.type || 'Event Production'}</Text>
-              </View>
-
-              <View className="p-4">
-                <View className="flex-row justify-between items-start mb-2">
-                  <Text className="text-primary font-bold text-base flex-1 mr-2">{event.name || event.title}</Text>
-                  <View className={`${statusStyle.bg} px-3 py-1 rounded-full`}>
-                    <Text className={`${statusStyle.text} font-bold text-[10px]`}>{displayStatus}</Text>
+            return (
+              <TouchableOpacity
+                key={event.id}
+                className="mb-4 flex-row rounded-xl border border-slate-100 bg-white p-3"
+                style={{ elevation: 2, shadowColor: '#0F172A', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }}
+                onPress={() => navigation.navigate('DetailEventClient', { eventId: event.id })}
+              >
+                <Image source={{ uri: image }} className="mr-3 h-24 w-24 rounded-lg" resizeMode="cover" />
+                <View className="flex-1">
+                  <View className="mb-2 flex-row items-start justify-between">
+                    <Text className="mr-2 flex-1 font-bold text-primary" numberOfLines={1}>{event.name}</Text>
+                    <StatusBadge label={status.clientLabel} bg={status.bg} text={status.text} />
+                  </View>
+                  <View className="mb-1 flex-row items-center">
+                    <Ionicons name="calendar-outline" size={13} color="#64748B" />
+                    <Text className="ml-1 text-xs text-slate-500">{formatDate(event.event_date)}</Text>
+                  </View>
+                  <View className="mb-3 flex-row items-center">
+                    <Ionicons name="location-outline" size={13} color="#64748B" />
+                    <Text className="ml-1 flex-1 text-xs text-slate-500" numberOfLines={1}>{location.venue}</Text>
+                  </View>
+                  <View className="flex-row items-center">
+                    <View className="flex-1">
+                      <ProgressBar progress={status.progress} />
+                    </View>
+                    <Text className="ml-2 text-xs font-bold text-primary">{status.progress}%</Text>
                   </View>
                 </View>
-                <View className="flex-row items-center mb-0.5">
-                  <Ionicons name="calendar-outline" size={12} color="#94A3B8" />
-                  <Text className="text-slate-400 text-xs ml-1">{event.event_date || event.date}</Text>
-                </View>
-                <View className="flex-row items-center mb-3">
-                  <Ionicons name="location-outline" size={12} color="#94A3B8" />
-                  <Text className="text-slate-400 text-xs ml-1">{event.location}</Text>
-                </View>
-
-                {event.progress !== undefined && (
-                  <View>
-                    <View className="flex-row justify-between mb-1.5">
-                      <Text className="text-slate-500 text-xs font-medium">Progress</Text>
-                      <Text className="text-primary text-xs font-bold">{event.progress}%</Text>
-                    </View>
-                    <View className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <View className="h-full bg-accent rounded-full" style={{ width: `${event.progress}%` }} />
-                    </View>
-                  </View>
-                )}
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-
-        {filtered.length === 0 && !loading && (
-          <View className="items-center mt-20">
-            <Text className="text-slate-500">Belum ada event untuk ditampilkan.</Text>
-          </View>
+              </TouchableOpacity>
+            );
+          })
         )}
       </ScrollView>
     </View>

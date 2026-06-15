@@ -1,19 +1,19 @@
 "use client"
 
-import { FormEvent, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { fetchAPI } from "@/lib/api"
-import { Mail, Lock, LogIn, ArrowRight } from "lucide-react"
+import { Mail, Lock, LogIn, Eye, EyeOff } from "lucide-react"
 
 export default function LoginPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -59,9 +59,9 @@ export default function LoginPage() {
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-950 p-6">
       {/* Background Image with Overlay */}
-      <div 
+      <div
         className="absolute inset-0 z-0 opacity-40"
-        style={{ 
+        style={{
           backgroundImage: `url('/mobile_login_background_1777809481060.png')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center'
@@ -87,7 +87,7 @@ export default function LoginPage() {
                 {error}
               </div>
             )}
-            
+
             <div className="space-y-2">
               <Label htmlFor="email" className="text-slate-300 ml-1">Email</Label>
               <div className="relative">
@@ -113,17 +113,25 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   name="password"
-                  type="password"
-                  placeholder="********"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
                   required
-                  className="h-13 pl-12 bg-white/5 border-white/10 text-white placeholder:text-slate-600 rounded-xl focus:ring-primary focus:border-primary transition-all"
+                  className="h-13 pl-12 pr-12 bg-white/5 border-white/10 text-white placeholder:text-slate-600 rounded-xl focus:ring-primary focus:border-primary transition-all"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(prev => !prev)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors focus:outline-none"
+                  aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
               </div>
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full h-14 text-lg font-bold bg-primary hover:bg-primary/90 text-white rounded-2xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98] group" 
+            <Button
+              type="submit"
+              className="w-full h-14 text-lg font-bold bg-primary hover:bg-primary/90 text-white rounded-2xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98] group"
               disabled={loading}
             >
               {loading ? (
@@ -141,15 +149,14 @@ export default function LoginPage() {
 
           <div className="mt-8 text-center">
             <p className="text-slate-400 text-sm">
-              Belum punya akun?{" "}
+              Belum punya akun admin?{" "}
               <Link href="/auth/signup" className="text-primary font-bold hover:underline underline-offset-4">
-                Daftar Gratis <ArrowRight className="inline h-4 w-4" />
+                Daftar Akun Admin
               </Link>
             </p>
           </div>
         </div>
       </div>
-
     </div>
   )
 }

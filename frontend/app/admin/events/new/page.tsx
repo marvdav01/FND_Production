@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Save, Calendar, MapPin, Clock, User } from "lucide-react"
+import { ArrowLeft, Save, Calendar, MapPin, Clock, User, Image as ImageIcon } from "lucide-react"
 import Link from "next/link"
 import type { Profile, Equipment } from "@/lib/types"
 import { toast } from "sonner"
@@ -39,6 +39,8 @@ export default function NewEventPage() {
   const [clients, setClients] = useState<Profile[]>([])
   const [equipment, setEquipment] = useState<Equipment[]>([])
   const [selectedEquipment, setSelectedEquipment] = useState<{ id: string; quantity: number }[]>([])
+  const [referenceFiles, setReferenceFiles] = useState<File[]>([])
+  const [previewUrls, setPreviewUrls] = useState<string[]>([])
   
   const [formData, setFormData] = useState({
     name: "",
@@ -53,6 +55,24 @@ export default function NewEventPage() {
     total_price: "",
     notes: "",
   })
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files)
+      setReferenceFiles((prev) => [...prev, ...filesArray])
+
+      const newPreviews = filesArray.map((file) => URL.createObjectURL(file))
+      setPreviewUrls((prev) => [...prev, ...newPreviews])
+    }
+  }
+
+  const removeFile = (index: number) => {
+    setReferenceFiles((prev) => prev.filter((_, i) => i !== index))
+    setPreviewUrls((prev) => {
+      URL.revokeObjectURL(prev[index])
+      return prev.filter((_, i) => i !== index)
+    })
+  }
 
   useEffect(() => {
     fetchClients()
@@ -89,27 +109,48 @@ export default function NewEventPage() {
     e.preventDefault()
     setLoading(true)
 
+    const toastId = toast.loading("Membuat event...")
+
     try {
       // Client-side validation
       if (!formData.name || formData.name.length < 3) {
-        toast.error("Nama event minimal 3 karakter")
+        toast.error("Nama event minimal 3 karakter", { id: toastId })
         setLoading(false)
         return
       }
       if (!formData.event_type) {
-        toast.error("Jenis event harus dipilih")
+        toast.error("Jenis event harus dipilih", { id: toastId })
         setLoading(false)
         return
       }
       if (!formData.event_date) {
-        toast.error("Tanggal event harus diisi")
+        toast.error("Tanggal event harus diisi", { id: toastId })
         setLoading(false)
         return
       }
       if (!formData.location) {
-        toast.error("Lokasi event harus diisi")
+        toast.error("Lokasi event harus diisi", { id: toastId })
         setLoading(false)
         return
+      }
+
+      // Upload reference images first if any
+      let uploadedImageUrls: string[] = []
+      if (referenceFiles.length > 0) {
+        toast.loading("Mengunggah gambar referensi...", { id: toastId })
+        const uploadData = new FormData()
+        referenceFiles.forEach((file) => {
+          uploadData.append("images", file)
+        })
+
+        const uploadRes = await fetchAPI("/uploads/images", {
+          method: "POST",
+          body: uploadData,
+        })
+
+        if (uploadRes.success && Array.isArray(uploadRes.data)) {
+          uploadedImageUrls = uploadRes.data.map((img: any) => img.url)
+        }
       }
 
       const equipmentPayload = selectedEquipment
@@ -120,7 +161,7 @@ export default function NewEventPage() {
         .filter((item) => item.equipmentId > 0 && item.quantity > 0)
 
       if (selectedEquipment.length > 0 && equipmentPayload.length !== selectedEquipment.length) {
-        toast.error("Periksa kembali jumlah equipment. Semua equipment harus memiliki kuantitas valid.")
+        toast.error("Periksa kembali jumlah equipment. Semua equipment harus memiliki kuantitas valid.", { id: toastId })
         setLoading(false)
         return
       }
@@ -134,12 +175,13 @@ export default function NewEventPage() {
         totalAmount: parseFloat(formData.total_price) || 0,
         dpAmount: 0,
         crew: [],
+        referenceImages: uploadedImageUrls,
       }
 
       if (formData.client_id) {
         const parsedClientId = Number.parseInt(formData.client_id, 10)
         if (Number.isNaN(parsedClientId)) {
-          toast.error("Client tidak valid")
+          toast.error("Client tidak valid", { id: toastId })
           setLoading(false)
           return
         }
@@ -156,21 +198,21 @@ export default function NewEventPage() {
       })
 
       if (res.success) {
-        toast.success("Event berhasil dibuat!")
+        toast.success("Event berhasil dibuat!", { id: toastId })
         router.push("/admin/events")
       } else {
-        toast.error(res.error || "Gagal membuat event")
+        toast.error(res.error || "Gagal membuat event", { id: toastId })
       }
     } catch (error: any) {
       console.error("Error creating event:", error)
       // If backend returned validation details, show them to the user
       if (error?.data?.details && Array.isArray(error.data.details)) {
         const messages = error.data.details.map((d: any) => d.message || JSON.stringify(d)).join('; ')
-        toast.error(messages)
+        toast.error(messages, { id: toastId })
       } else if (error?.data?.error) {
-        toast.error(error.data.error)
+        toast.error(error.data.error, { id: toastId })
       } else {
-        toast.error(error.message || "Terjadi kesalahan sistem")
+        toast.error(error.message || "Terjadi kesalahan sistem", { id: toastId })
       }
     } finally {
       setLoading(false)
@@ -351,7 +393,7 @@ export default function NewEventPage() {
           {/* Requirements */}
           <Card>
             <CardHeader>
-              <CardTitle>Kebutuhan</CardTitle>
+              <CardTitle>Kebutuhan & Referensi</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -375,7 +417,51 @@ export default function NewEventPage() {
                   rows={3}
                 />
               </div>
-            </CardContent>
+
+              <div className="space-y-2">
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  <ImageIcon className="h-5 w-5 text-primary" />
+                  Gambar Referensi
+                </Label>
+                <div className="relative border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors rounded-lg p-6 flex flex-col items-center justify-center gap-2 bg-muted/20 cursor-pointer group">
+                  <Input
+                    id="reference_images"
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                  />
+                  <div className="p-3 rounded-full bg-primary/10 text-primary group-hover:scale-110 transition-transform duration-300">
+                    <ImageIcon className="h-6 w-6" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-foreground">Pilih file gambar</p>
+                    <p className="text-xs text-muted-foreground mt-1">atau seret dan lepas di sini (Max. 8MB)</p>
+                  </div>
+                </div>
+                {previewUrls.length > 0 && (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 mt-2">
+                    {previewUrls.map((url, index) => (
+                      <div key={index} className="relative group aspect-video rounded-lg overflow-hidden border bg-muted shadow-sm hover:shadow-md transition-all">
+                        <img src={url} alt="Preview" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="bg-red-600 hover:bg-red-700 text-white rounded-full p-2 transition-colors shadow-md transform scale-90 group-hover:scale-100 duration-300"
+                            title="Hapus gambar"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>            </CardContent>
           </Card>
 
           {/* Equipment Selection */}

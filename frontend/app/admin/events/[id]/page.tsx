@@ -17,17 +17,22 @@ import {
   ArrowLeft,
   Calendar,
   MapPin,
-  Clock,
   User,
-  Phone,
   Package,
   Users,
   CreditCard,
   Edit,
   CheckCircle2,
+  Image as ImageIcon,
+  Trash2,
+  AlertCircle,
 } from "lucide-react"
 import Link from "next/link"
-import type { Event, EventStatus, Equipment, Profile, Payment } from "@/lib/types"
+import { toast } from "sonner"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import type { Event, EventStatus, Payment } from "@/lib/types"
 
 const statusColors: Record<EventStatus, string> = {
   pending: "bg-gray-100 text-gray-700 border-gray-300",
@@ -40,6 +45,19 @@ const statusColors: Record<EventStatus, string> = {
 
 const statusOrder: EventStatus[] = ["pending", "survey", "deal", "running", "selesai"]
 
+function parseReferenceImages(value: unknown): string[] {
+  if (Array.isArray(value)) return value.filter(Boolean) as string[]
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : []
+    } catch {
+      return value ? [value] : []
+    }
+  }
+  return []
+}
+
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [event, setEvent] = useState<Event | null>(null)
@@ -47,13 +65,86 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [eventCrew, setEventCrew] = useState<any[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  const [allCrew, setAllCrew] = useState<any[]>([])
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
+  const [assignFormData, setAssignFormData] = useState({ crewId: "", task: "" })
+  const [assignLoading, setAssignLoading] = useState(false)
 
   useEffect(() => {
     fetchEventDetails()
+    fetchAllCrew()
   }, [id])
+
+  async function fetchAllCrew() {
+    try {
+      const res = await fetchAPI('/crew')
+      if (res.success) {
+        setAllCrew(res.data)
+      }
+    } catch (error) {
+      console.error("Error fetching crew:", error)
+    }
+  }
+
+  async function handleAssignCrew(e: React.FormEvent) {
+    e.preventDefault()
+    if (!assignFormData.crewId) {
+      toast.error("Silakan pilih crew terlebih dahulu")
+      return
+    }
+    setAssignLoading(true)
+    const toastId = toast.loading("Menugaskan crew...")
+    try {
+      const res = await fetchAPI(`/crew/${id}/assign`, {
+        method: 'POST',
+        body: JSON.stringify({
+          crewId: Number(assignFormData.crewId),
+          task: assignFormData.task || 'Support'
+        })
+      })
+
+      if (res.success) {
+        toast.success("Crew berhasil ditugaskan!", { id: toastId })
+        setIsAssignDialogOpen(false)
+        setAssignFormData({ crewId: "", task: "" })
+        fetchEventDetails()
+        fetchAllCrew()
+      } else {
+        toast.error(res.error || "Gagal menugaskan crew", { id: toastId })
+      }
+    } catch (error: any) {
+      console.error("Error assigning crew:", error)
+      toast.error(error.message || "Gagal menugaskan crew", { id: toastId })
+    } finally {
+      setAssignLoading(false)
+    }
+  }
+
+  async function handleUnassignCrew(crewId: number) {
+    const toastId = toast.loading("Melepas tugas crew...")
+    try {
+      const res = await fetchAPI(`/crew/${id}/assign/${crewId}`, {
+        method: 'DELETE'
+      })
+
+      if (res.success) {
+        toast.success("Tugas crew berhasil dilepas!", { id: toastId })
+        fetchEventDetails()
+        fetchAllCrew()
+      } else {
+        toast.error(res.error || "Gagal melepas tugas crew", { id: toastId })
+      }
+    } catch (error: any) {
+      console.error("Error unassigning crew:", error)
+      toast.error(error.message || "Gagal melepas tugas crew", { id: toastId })
+    }
+  }
 
   async function fetchEventDetails() {
     setLoading(true)
+    setLoadError(null)
     try {
       const res = await fetchAPI(`/events/${id}`)
       if (res.success) {
@@ -64,26 +155,34 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           total_price: e.total_amount,
           client: { full_name: e.client_name, phone: e.client_phone || "-" }
         } as any)
-        
+
         setEventEquipment(e.equipment?.map((eq: any) => ({
           id: eq.id,
           quantity: eq.quantity,
           equipment: { name: eq.name, category: 'Equipment' }
         })) || [])
-        
+
         setEventCrew(e.crew?.map((c: any) => ({
           id: c.id,
           role: c.task || c.role,
           crew: { full_name: c.name, position: c.role }
         })) || [])
-        
+
         setPayments((e.payments || []).map((payment: any) => ({
           ...payment,
           status: payment.status === "paid" ? "lunas" : "belum_lunas",
         })))
+      } else {
+        const errMsg = res.error || "Gagal memuat detail event"
+        console.error("fetchEventDetails API error:", errMsg)
+        setLoadError(errMsg)
+        toast.error(errMsg)
       }
-    } catch (error) {
+    } catch (error: any) {
+      const errMsg = error?.message || "Gagal terhubung ke server"
       console.error("Error fetching event details:", error)
+      setLoadError(errMsg)
+      toast.error(errMsg)
     }
     setLoading(false)
   }
@@ -96,6 +195,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       })
       if (res.success) {
         setEvent((prev) => (prev ? { ...prev, status: newStatus } : null))
+        toast.success("Status event berhasil diperbarui")
+      } else {
+        toast.error(res.error || "Gagal memperbarui status")
       }
     } catch (error) {
       console.error("Error updating status:", error)
@@ -127,6 +229,24 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     )
   }
 
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-destructive">Gagal Memuat Event</h2>
+          <p className="text-muted-foreground mt-1 max-w-md">{loadError}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={fetchEventDetails}>Coba Lagi</Button>
+          <Link href="/admin/events">
+            <Button variant="outline">Kembali ke Events</Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   if (!event) {
     return (
       <div className="text-center py-12">
@@ -139,6 +259,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   }
 
   const currentStatusIndex = statusOrder.indexOf(event.status)
+  const documentationImages = parseReferenceImages((event as any).reference_images)
 
   return (
     <div className="space-y-6">
@@ -196,14 +317,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 >
                   {status}
                 </span>
-                {index < statusOrder.length - 1 && (
-                  <div
-                    className={`absolute h-0.5 w-full max-w-[100px] ${
-                      index < currentStatusIndex ? "bg-primary" : "bg-muted"
-                    }`}
-                    style={{ left: "50%", top: "20px" }}
-                  />
-                )}
               </div>
             ))}
           </div>
@@ -229,7 +342,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         <TabsList>
           <TabsTrigger value="info">Info</TabsTrigger>
           <TabsTrigger value="equipment">Equipment</TabsTrigger>
-          <TabsTrigger value="crew">Crew</TabsTrigger>
+          <TabsTrigger value="crew">Crew ({eventCrew.length})</TabsTrigger>
+          <TabsTrigger value="documentation">Dokumentasi</TabsTrigger>
           <TabsTrigger value="payment">Payment</TabsTrigger>
         </TabsList>
 
@@ -248,10 +362,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   <span className="font-medium">{formatDate(event.event_date)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Waktu</span>
-                  <span className="font-medium">
-                    {event.start_time || "-"} - {event.end_time || "Selesai"}
-                  </span>
+                  <span className="text-muted-foreground">Tipe</span>
+                  <span className="font-medium">{event.event_type || "-"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total</span>
@@ -259,6 +371,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     {formatCurrency(Number(event.total_price) || 0)}
                   </span>
                 </div>
+                {(event as any).notes && (
+                  <div className="pt-2 border-t">
+                    <span className="text-muted-foreground text-sm">Catatan:</span>
+                    <p className="text-sm mt-1">{(event as any).notes}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -270,10 +388,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Venue</span>
-                  <span className="font-medium">{event.venue_name || "-"}</span>
-                </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Lokasi</span>
                   <span className="font-medium">{event.location}</span>
@@ -302,12 +416,21 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Kebutuhan</CardTitle>
+                <CardTitle className="text-base">Pembayaran</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  {event.requirements || "Tidak ada kebutuhan khusus"}
-                </p>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total</span>
+                  <span className="font-medium">{formatCurrency(Number((event as any).total_amount) || 0)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">DP</span>
+                  <span className="font-medium">{formatCurrency(Number((event as any).dp_amount) || 0)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Terbayar</span>
+                  <span className="font-medium text-green-600">{formatCurrency(Number((event as any).paid_amount) || 0)}</span>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -323,7 +446,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             </CardHeader>
             <CardContent>
               {eventEquipment.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Belum ada equipment</p>
+                <p className="text-center text-muted-foreground py-8">Belum ada equipment ditambahkan</p>
               ) : (
                 <div className="space-y-3">
                   {eventEquipment.map((item) => (
@@ -344,34 +467,138 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           </Card>
         </TabsContent>
 
+        {/* ===== TAB CREW ===== */}
         <TabsContent value="crew">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
-                Crew ({eventCrew.length})
+                Crew yang Ditugaskan ({eventCrew.length})
               </CardTitle>
+              <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="bg-primary hover:bg-primary/90">
+                    + Tugaskan Crew
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Tugaskan Crew ke Event Ini</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleAssignCrew} className="space-y-4 pt-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="crew-select">Pilih Crew *</Label>
+                      <Select
+                        value={assignFormData.crewId}
+                        onValueChange={(value) => setAssignFormData({ ...assignFormData, crewId: value })}
+                      >
+                        <SelectTrigger id="crew-select">
+                          <SelectValue placeholder="Pilih anggota crew..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allCrew.length === 0 ? (
+                            <SelectItem value="_empty" disabled>Tidak ada crew tersedia</SelectItem>
+                          ) : (
+                            allCrew
+                              .filter(c => !eventCrew.some(ec => ec.id === c.id))
+                              .map((c: any) => (
+                                <SelectItem key={c.id} value={String(c.id)}>
+                                  {c.name} — {c.role} ({c.status === 'available' ? '✅ Tersedia' : '🔴 On Job'})
+                                </SelectItem>
+                              ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="crew-task">Tugas / Peran dalam Event *</Label>
+                      <Input
+                        id="crew-task"
+                        placeholder="Contoh: Setup Lighting, Operator DMX"
+                        value={assignFormData.task}
+                        onChange={(e) => setAssignFormData({ ...assignFormData, task: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button type="button" variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
+                        Batal
+                      </Button>
+                      <Button type="submit" className="bg-primary" disabled={assignLoading}>
+                        {assignLoading ? "Memproses..." : "Tugaskan"}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               {eventCrew.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Belum ada crew</p>
+                <div className="text-center py-10">
+                  <Users className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+                  <p className="text-muted-foreground">Belum ada crew yang ditugaskan</p>
+                  <p className="text-sm text-muted-foreground mt-1">Klik tombol &quot;Tugaskan Crew&quot; di atas untuk menambahkan</p>
+                </div>
               ) : (
                 <div className="space-y-3">
                   {eventCrew.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between rounded-lg border p-3"
+                      className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/30 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                          <User className="h-5 w-5 text-muted-foreground" />
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <User className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <p className="font-medium">{item.crew.full_name}</p>
-                          <p className="text-sm text-muted-foreground">{item.role || item.crew.position}</p>
+                          <p className="font-medium">{item.crew?.full_name}</p>
+                          <p className="text-sm text-muted-foreground">{item.role || item.crew?.position}</p>
                         </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
+                        onClick={() => handleUnassignCrew(item.id)}
+                        title="Lepas tugas crew"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="documentation">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ImageIcon className="h-5 w-5 text-primary" />
+                Dokumentasi ({documentationImages.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {documentationImages.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">Belum ada dokumentasi</p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {documentationImages.map((url, index) => (
+                    <a
+                      key={`${url}-${index}`}
+                      href={getAssetUrl(url)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="overflow-hidden rounded-lg border bg-muted"
+                    >
+                      <img
+                        src={getAssetUrl(url)}
+                        alt={`Dokumentasi event ${index + 1}`}
+                        className="aspect-video w-full object-cover transition-transform hover:scale-105"
+                      />
+                    </a>
                   ))}
                 </div>
               )}
@@ -406,12 +633,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                       <div>
                         <p className="font-medium">
                           {payment.payment_type === "dp"
-                            ? `DP (${payment.percentage}%)`
+                            ? `DP`
                             : "Pelunasan"}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {payment.payment_date
-                            ? new Date(payment.payment_date).toLocaleDateString("id-ID")
+                          {(payment as any).created_at
+                            ? new Date((payment as any).created_at).toLocaleDateString("id-ID")
                             : "Belum dibayar"}
                         </p>
                       </div>

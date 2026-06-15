@@ -121,6 +121,7 @@ export default function UsersPage() {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     setSaving(true)
+    const toastId = toast.loading(editingUser ? "Memperbarui data user..." : "Membuat user baru...")
     try {
       const payload = {
         name: formData.name,
@@ -135,19 +136,19 @@ export default function UsersPage() {
           method: "PUT",
           body: JSON.stringify(payload),
         })
-        toast.success("User berhasil diperbarui")
+        toast.success("User berhasil diperbarui!", { id: toastId })
       } else {
         await fetchAPI("/auth/users", {
           method: "POST",
           body: JSON.stringify({ ...payload, password: formData.password }),
         })
-        toast.success("User berhasil dibuat")
+        toast.success("User berhasil dibuat!", { id: toastId })
       }
 
       setDialogOpen(false)
       loadUsers()
     } catch (err: any) {
-      toast.error(err.message || "Gagal menyimpan user")
+      toast.error(err.message || "Gagal menyimpan user", { id: toastId })
     } finally {
       setSaving(false)
     }
@@ -155,15 +156,25 @@ export default function UsersPage() {
 
   async function handleDelete(user: AdminUser) {
     const name = user.name || user.full_name || user.email
-    if (!confirm(`Hapus user ${name}?`)) return
-
-    try {
-      await fetchAPI(`/auth/users/${user.id}`, { method: "DELETE" })
-      toast.success("User berhasil dihapus")
-      loadUsers()
-    } catch (err: any) {
-      toast.error(err.message || "Gagal menghapus user")
-    }
+    toast(`Apakah Anda yakin ingin menghapus user ${name}?`, {
+      action: {
+        label: "Hapus",
+        onClick: async () => {
+          const toastId = toast.loading("Menghapus user...")
+          try {
+            await fetchAPI(`/auth/users/${user.id}`, { method: "DELETE" })
+            toast.success("User berhasil dihapus!", { id: toastId })
+            loadUsers()
+          } catch (err: any) {
+            toast.error(err.message || "Gagal menghapus user", { id: toastId })
+          }
+        }
+      },
+      cancel: {
+        label: "Batal",
+        onClick: () => {}
+      }
+    })
   }
 
   return (

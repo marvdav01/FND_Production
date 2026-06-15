@@ -51,6 +51,17 @@ const statusLabels: Record<EventStatus, string> = {
   cancel: "Cancel",
 }
 
+function getFirstImageUrl(images: any): string | null {
+  try {
+    if (!images) return null
+    const parsed = typeof images === 'string' ? JSON.parse(images) : images
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed[0]
+    }
+  } catch {}
+  return null
+}
+
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
@@ -87,17 +98,27 @@ export default function EventsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Yakin ingin membatalkan event ini?")) return
-
-    try {
-      const res = await fetchAPI(`/events/${id}`, { method: "DELETE" })
-      if (res.success) {
-        toast.success("Event berhasil dibatalkan")
-        fetchEvents()
+    toast("Apakah Anda yakin ingin membatalkan event ini?", {
+      action: {
+        label: "Batalkan Event",
+        onClick: async () => {
+          const toastId = toast.loading("Membatalkan event...")
+          try {
+            const res = await fetchAPI(`/events/${id}`, { method: "DELETE" })
+            if (res.success) {
+              toast.success("Event berhasil dibatalkan!", { id: toastId })
+              fetchEvents()
+            }
+          } catch (error: any) {
+            toast.error(error.message || "Gagal membatalkan event", { id: toastId })
+          }
+        }
+      },
+      cancel: {
+        label: "Batal",
+        onClick: () => {}
       }
-    } catch (error: any) {
-      toast.error(error.message || "Gagal membatalkan event")
-    }
+    })
   }
 
   const filteredEvents = events.filter(
@@ -199,8 +220,23 @@ export default function EventsPage() {
                   {filteredEvents.map((event) => (
                     <TableRow key={event.id}>
                       <TableCell>
-                        <div className="font-medium">{event.name}</div>
-                        <div className="text-sm text-muted-foreground">{event.event_type}</div>
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-md overflow-hidden bg-slate-100 flex-shrink-0 border flex items-center justify-center">
+                            {getFirstImageUrl(event.reference_images) ? (
+                              <img
+                                src={getFirstImageUrl(event.reference_images)!}
+                                alt={event.name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <Calendar className="h-5 w-5 text-muted-foreground/60" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-medium">{event.name}</div>
+                            <div className="text-sm text-muted-foreground">{event.event_type}</div>
+                          </div>
+                        </div>
                       </TableCell>
                       <TableCell>{event.client?.full_name || "-"}</TableCell>
                       <TableCell>{formatDate(event.event_date)}</TableCell>

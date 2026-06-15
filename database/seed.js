@@ -34,8 +34,9 @@ async function run() {
 
     // Seed Users
     const users = [
-      ['Admin Name', 'admin@fnd.com', 'adminpass', 'admin'],
-      ['Client One', 'client@fnd.com', 'clientpass', 'client'],
+      ['Admin Name', 'admin@fnd.com', 'password123', 'admin'],
+      ['Client One', 'client@fnd.com', 'password123', 'client'],
+      ['Rian Setiawan', 'crew@fnd.com', 'password123', 'crew'],
     ]
 
     for (const [name, email, password, role] of users) {
@@ -49,13 +50,16 @@ async function run() {
     }
 
     // Seed Crew
+    const [crewUserRows] = await pool.query('SELECT id FROM users WHERE email = ?', ['crew@fnd.com'])
+    const crewUserId = crewUserRows[0]?.id || null
+
     const crew = [
-      ['Rian Setiawan', 'Technician', '081234567890'],
-      ['Maya Putri', 'Operator', '081234567891'],
-      ['Anton Pratama', 'Rigger', '081234567892'],
+      ['Rian Setiawan', 'Technician', '081234567890', crewUserId],
+      ['Maya Putri', 'Operator', '081234567891', null],
+      ['Anton Pratama', 'Rigger', '081234567892', null],
     ]
-    for (const [name, role, phone] of crew) {
-      await pool.query('INSERT IGNORE INTO crew (name, role, phone) VALUES (?, ?, ?)', [name, role, phone])
+    for (const [name, role, phone, userId] of crew) {
+      await pool.query('INSERT IGNORE INTO crew (name, role, phone, user_id) VALUES (?, ?, ?, ?)', [name, role, phone, userId])
     }
 
     // Seed Equipment: Real FND Production items + Legacy items for safety

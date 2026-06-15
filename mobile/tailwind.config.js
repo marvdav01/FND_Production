@@ -15,6 +15,8 @@ module.exports = {
         warning: '#F59E0B',
         danger: '#EF4444',
         background: '#FFFFFF',
+        crewAccent: '#F97316',
+        crewBg: '#F8FAFC',
       },
     },
   },

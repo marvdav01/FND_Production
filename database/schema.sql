@@ -106,3 +106,19 @@ CREATE TABLE IF NOT EXISTS payments (
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
   INDEX idx_payments_status (status)
 );
+
+CREATE TABLE IF NOT EXISTS event_checkins (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  event_id INT NOT NULL,
+  crew_user_id INT NOT NULL,
+  check_in_at DATETIME NULL,
+  check_out_at DATETIME NULL,
+  latitude DECIMAL(10,7) NULL,
+  longitude DECIMAL(10,7) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+  FOREIGN KEY (crew_user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE KEY uniq_event_checkin_crew (event_id, crew_user_id),
+  INDEX idx_event_checkins_event (event_id)
+);

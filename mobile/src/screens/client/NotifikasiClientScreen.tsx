@@ -1,33 +1,127 @@
-import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { api } from '../../services/api';
+import { EmptyState, FndHeader } from '../../components/FndUi';
+import { formatDate, getEventStatusMeta } from '../../utils/fnd';
 
-const NOTIFS = [
-  { id: 1, title: 'Booking Dikonfirmasi', desc: 'Booking untuk Konser Musik Lokal telah dikonfirmasi tim kami.', time: '2 jam yang lalu', type: 'Booking' },
-  { id: 2, title: 'Pembayaran Diterima', desc: 'Pembayaran DP sebesar Rp 5.000.000 telah kami terima.', time: '1 hari yang lalu', type: 'Pembayaran' },
-  { id: 3, title: 'Promo Akhir Tahun', desc: 'Diskon 20% untuk penyewaan Lighting. Klaim sekarang!', time: '3 hari yang lalu', type: 'Promo' },
-];
+const FILTERS = ['Semua', 'Booking', 'Pembayaran'];
 
-export const NotifikasiClientScreen = () => {
+export const NotifikasiClientScreen = ({ navigation }: any) => {
+  const [filter, setFilter] = useState('Semua');
+  const [events, setEvents] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchEvents = async () => {
+    const response = await api.get('/events');
+    if (response.data?.success) setEvents(response.data.data || []);
+  };
+
+  useEffect(() => {
+    fetchEvents().catch(() => null);
+  }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchEvents().catch(() => null);
+    setRefreshing(false);
+  };
+
+  const notifications = useMemo(() => {
+    const booking = events.slice(0, 8).map((event) => {
+      const status = getEventStatusMeta(event.status);
+      return {
+        id: `event-${event.id}`,
+        category: 'Booking',
+        title: status.clientLabel === 'Menunggu Konfirmasi' ? 'Booking dibuat' : 'Update event',
+        desc: `${event.name} berstatus ${status.clientLabel}.`,
+        time: formatDate(event.updated_at || event.event_date),
+        icon: 'calendar',
+        iconBg: 'bg-blue-100',
+        iconColor: '#2563EB',
+        eventId: event.id,
+      };
+    });
+
+    const payment = events
+      .filter((event) => Number(event.paid_amount || 0) > 0)
+      .slice(0, 4)
+      .map((event) => ({
+        id: `payment-${event.id}`,
+        category: 'Pembayaran',
+        title: 'Pembayaran diterima',
+        desc: `Pembayaran untuk ${event.name} telah tercatat.`,
+        time: formatDate(event.updated_at || event.event_date),
+        icon: 'wallet',
+        iconBg: 'bg-emerald-100',
+        iconColor: '#059669',
+        eventId: event.id,
+      }));
+
+    return [
+      ...booking,
+      ...payment,
+      {
+        id: 'promo',
+        category: 'Promo',
+        title: 'Promo paket wedding',
+        desc: 'Diskon hingga 15% untuk paket wedding bulan ini.',
+        time: 'FND Production',
+        icon: 'pricetag',
+        iconBg: 'bg-orange-100',
+        iconColor: '#F97316',
+      },
+    ];
+  }, [events]);
+
+  const filtered = filter === 'Semua' ? notifications : notifications.filter((item) => item.category === filter);
+
   return (
-    <View className="flex-1 bg-gray-50">
-      <View className="bg-[#0F172A] pt-16 pb-6 px-6 rounded-b-3xl">
-        <Text className="text-white text-2xl font-bold mb-4">Notifikasi</Text>
+    <View className="flex-1 bg-white">
+      <FndHeader title="Notifikasi" dark onBack={() => navigation.goBack()} rightIcon="calendar-outline" />
+
+      <View className="px-5 pt-4">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3">
+          {FILTERS.map((item) => (
+            <TouchableOpacity
+              key={item}
+              className={`mr-2 rounded-full px-4 py-2 ${filter === item ? 'bg-primary' : 'bg-slate-100'}`}
+              onPress={() => setFilter(item)}
+            >
+              <Text className={`text-xs font-bold ${filter === item ? 'text-white' : 'text-slate-500'}`}>{item}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
-      <ScrollView className="flex-1 px-6 pt-6 pb-20">
-        {NOTIFS.map(notif => (
-          <View key={notif.id} className="bg-white rounded-2xl p-4 mb-4 border border-gray-100 shadow-sm flex-row items-start">
-            <View className="w-12 h-12 bg-blue-50 rounded-full mr-4 items-center justify-center">
-              <Text className="text-[#2563EB] font-bold text-lg">{notif.type.charAt(0)}</Text>
-            </View>
-            <View className="flex-1">
-              <View className="flex-row justify-between mb-1">
-                <Text className="text-[#0F172A] font-bold text-base flex-1">{notif.title}</Text>
-                <Text className="text-gray-400 text-xs">{notif.time}</Text>
-              </View>
-              <Text className="text-gray-500 text-sm">{notif.desc}</Text>
-            </View>
+
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 104 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2563EB" />}
+      >
+        {filtered.length === 0 ? (
+          <View className="px-5 pt-6">
+            <EmptyState icon="notifications-outline" title="Belum ada notifikasi" />
           </View>
-        ))}
+        ) : (
+          filtered.map((notif: any) => (
+            <TouchableOpacity
+              key={notif.id}
+              className="mx-5 flex-row items-start border-b border-slate-100 py-4"
+              onPress={() => notif.eventId && navigation.getParent()?.navigate('EventSaya', { screen: 'DetailEventClient', params: { eventId: notif.eventId } })}
+            >
+              <View className={`mr-4 h-11 w-11 items-center justify-center rounded-xl ${notif.iconBg}`}>
+                <Ionicons name={notif.icon as any} size={20} color={notif.iconColor} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-bold text-primary">{notif.title}</Text>
+                <Text className="mt-1 text-xs leading-5 text-slate-500">{notif.desc}</Text>
+                <Text className="mt-1.5 text-[10px] text-slate-400">{notif.time}</Text>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
     </View>
   );

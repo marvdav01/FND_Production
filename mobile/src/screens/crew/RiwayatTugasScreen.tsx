@@ -1,150 +1,198 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { api } from '../../services/api';
+import { EmptyState, FndHeader, InfoRow, LoadingState, StatusBadge } from '../../components/FndUi';
+import { formatDate, getEventStatusMeta, getLocationParts } from '../../utils/fnd';
 
-const HISTORY = [
-  {
-    id: 1,
-    title: 'Launch Produk XYZ',
-    location: 'Balai Kartini, Jakarta',
-    date: '6 Mei 2024',
-    role: 'Posisi: Lighting Crew',
-    status: 'Selesai',
-    statusColor: 'bg-emerald-100',
-    statusTextColor: 'text-emerald-600',
-    rating: 5.0,
-    image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=100&q=80',
-  },
-  {
-    id: 2,
-    title: 'Seminar Nasional 2024',
-    location: 'Hotel Indonesia Kempinski',
-    date: '29 April 2024',
-    role: 'Posisi: Audio Crew',
-    status: 'Selesai',
-    statusColor: 'bg-emerald-100',
-    statusTextColor: 'text-emerald-600',
-    rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=100&q=80',
-  },
-  {
-    id: 3,
-    title: 'Konser Band Merah',
-    location: 'Istora Senayan',
-    date: '20 April 2024',
-    role: 'Posisi: Stage Crew',
-    status: 'Dibatalkan',
-    statusColor: 'bg-red-100',
-    statusTextColor: 'text-red-600',
-    rating: null,
-    image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=100&q=80',
-  },
-  {
-    id: 4,
-    title: 'Pameran Otomotif 2024',
-    location: 'Atilora Kemayoran',
-    date: '15 April 2024',
-    role: 'Posisi: Lighting Crew',
-    status: 'Selesai',
-    statusColor: 'bg-emerald-100',
-    statusTextColor: 'text-emerald-600',
-    rating: 5.0,
-    image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=100&q=80',
-  },
-];
+const FILTER_OPTIONS = ['Semua Status', 'Selesai', 'Dibatalkan'];
 
-export const RiwayatTugasScreen = () => {
-  const [filter, setFilter] = useState('Semua');
+// Helper to assign a thematic emoji based on event name
+const getEventEmoji = (name: string) => {
+  const cleanName = String(name || '').toLowerCase();
+  if (cleanName.includes('wedding') || cleanName.includes('nikah') || cleanName.includes('sinta')) return '💍';
+  if (cleanName.includes('corporate') || cleanName.includes('gathering')) return '🏢';
+  return '🎵';
+};
+
+// Helper to assign a gradient bg styling based on event name
+const getEventBgClass = (name: string) => {
+  const cleanName = String(name || '').toLowerCase();
+  if (cleanName.includes('wedding')) return 'bg-indigo-950';
+  if (cleanName.includes('corporate')) return 'bg-emerald-950';
+  return 'bg-purple-950';
+};
+
+export const RiwayatTugasScreen = ({ navigation }: any) => {
+  const insets = useSafeAreaInsets();
+  const [filter, setFilter] = useState('Semua Status');
   const [showFilter, setShowFilter] = useState(false);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const FILTER_OPTIONS = ['Semua', 'Selesai', 'Dibatalkan'];
-  const filtered = filter === 'Semua' ? HISTORY : HISTORY.filter(h => h.status === filter);
-
-  const renderStars = (rating: number | null) => {
-    if (!rating) return null;
-    return (
-      <View className="flex-row items-center">
-        <Ionicons name="star" size={14} color="#F59E0B" />
-        <Text className="text-warning font-bold text-sm ml-1">{rating.toFixed(1)}</Text>
-      </View>
-    );
+  const fetchTasks = async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const response = await api.get('/events/assigned');
+      if (response.data?.success) setTasks(response.data.data || []);
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.error || error.message || 'Gagal memuat riwayat tugas');
+    } finally {
+      if (!silent) setLoading(false);
+    }
   };
 
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchTasks(true);
+    setRefreshing(false);
+  };
+
+  const history = useMemo(
+    () => tasks.filter((task) => ['selesai', 'cancel'].includes(String(task.status).toLowerCase())),
+    [tasks],
+  );
+
+  const filtered = history.filter((task) => {
+    // Search query filter
+    const nameMatch = String(task.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+    if (!nameMatch) return false;
+
+    // Dropdown filter
+    if (filter === 'Semua Status') return true;
+    const label = getEventStatusMeta(task.status).label;
+    return label === filter;
+  });
+
+  if (loading) return <LoadingState />;
+
   return (
-    <View className="flex-1 bg-white">
-      {/* Filter Dropdown Row */}
-      <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-100">
-        <Text className="text-primary font-bold text-base">{filtered.length} Riwayat</Text>
-        <TouchableOpacity
-          onPress={() => setShowFilter(!showFilter)}
-          className="flex-row items-center bg-slate-100 px-4 py-2 rounded-full"
-        >
-          <Text className="text-primary font-semibold text-sm mr-1">{filter}</Text>
-          <Ionicons name={showFilter ? 'chevron-up' : 'chevron-down'} size={16} color="#0F172A" />
-        </TouchableOpacity>
+    <View className="flex-1 bg-crewBg">
+      <FndHeader title="Riwayat Tugas" dark onBack={() => navigation.goBack()} />
+
+      {/* Advanced Search Section */}
+      <View className="bg-white px-4 py-3 border-b border-slate-100">
+        <View className="flex-row items-center gap-2.5">
+          <View className="flex-1 flex-row items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+            <Ionicons name="search-outline" size={14} color="#94A3B8" />
+            <TextInput
+              placeholder="Advanced Search"
+              placeholderTextColor="#94A3B8"
+              className="flex-1 ml-2 text-xs p-0 font-medium text-primary"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+          
+          <TouchableOpacity 
+            onPress={() => setShowFilter(!showFilter)}
+            className="flex-row items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5"
+          >
+            <Ionicons name="funnel-outline" size={14} color="#475569" />
+            <Text className="ml-1.5 text-xs font-bold text-slate-600">Filter</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Dropdown overlay */}
+        {showFilter ? (
+          <View className="mt-2.5 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-lg" style={{ elevation: 5 }}>
+            {FILTER_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option}
+                className={`px-4 py-3 ${option === filter ? 'bg-orange-50/20' : 'bg-white'}`}
+                onPress={() => {
+                  setFilter(option);
+                  setShowFilter(false);
+                }}
+              >
+                <Text className={`text-xs font-bold ${option === filter ? 'text-crewAccent' : 'text-primary'}`}>{option}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
       </View>
 
-      {/* Filter Menu */}
-      {showFilter && (
-        <View className="bg-white border border-slate-100 mx-6 rounded-xl shadow-md z-10" style={{ elevation: 8, position: 'absolute', top: 70, right: 16, minWidth: 140, zIndex: 100 }}>
-          {FILTER_OPTIONS.map(opt => (
-            <TouchableOpacity
-              key={opt}
-              className={`px-4 py-3 border-b border-slate-50 ${opt === filter ? 'bg-blue-50' : ''}`}
-              onPress={() => { setFilter(opt); setShowFilter(false); }}
-            >
-              <Text className={`font-semibold ${opt === filter ? 'text-accent' : 'text-primary'}`}>{opt}</Text>
-            </TouchableOpacity>
-          ))}
+      {/* Filter Quick Chips */}
+      <View className="flex-row gap-2 px-4 py-2.5 bg-white border-b border-slate-100">
+        <View className="bg-crewAccent px-3 py-1.5 rounded-full shadow-sm shadow-crewAccent/25">
+          <Text className="text-[9px] font-black text-white">Rating Badge</Text>
         </View>
-      )}
+        <View className="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full">
+          <Text className="text-[9px] font-bold text-slate-500">Performance Score</Text>
+        </View>
+        <View className="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full">
+          <Text className="text-[9px] font-bold text-slate-500">Infinite Scroll</Text>
+        </View>
+      </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
-        {filtered.map(item => (
-          <View
-            key={item.id}
-            className="bg-white rounded-2xl mb-4 border border-slate-100 overflow-hidden"
-            style={{ elevation: 2, shadowColor: '#0F172A', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }}
-          >
-            <View className="flex-row p-4">
-              {/* Thumbnail */}
-              <Image
-                source={{ uri: item.image }}
-                className="w-14 h-14 rounded-xl mr-4"
-                resizeMode="cover"
-              />
-              {/* Info */}
-              <View className="flex-1">
-                <View className="flex-row items-center justify-between mb-1">
-                  <Text className="text-primary font-bold text-base flex-1 mr-2" numberOfLines={1}>{item.title}</Text>
-                  <View className={`${item.statusColor} px-2.5 py-1 rounded-full`}>
-                    <Text className={`${item.statusTextColor} font-bold text-[10px]`}>{item.status}</Text>
+      {/* List items with horizontal split thumbnail layout */}
+      <ScrollView
+        className="flex-1 px-4 mt-3.5"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F97316" />}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 110 }}
+      >
+        {filtered.length === 0 ? (
+          <EmptyState icon="time-outline" title="Belum ada riwayat" description="Tugas selesai atau dibatalkan akan muncul di sini." />
+        ) : (
+          filtered.map((task) => {
+            const status = getEventStatusMeta(task.status);
+            const location = getLocationParts(task);
+            const isDone = String(task.status).toLowerCase() === 'selesai';
+            const emoji = getEventEmoji(task.name);
+            const bgClass = getEventBgClass(task.name);
+
+            return (
+              <TouchableOpacity
+                key={task.id}
+                className="mb-3 rounded-[24px] border border-slate-100 bg-white overflow-hidden flex-row"
+                style={{ 
+                  elevation: 2, 
+                  shadowColor: '#0F172A', 
+                  shadowOpacity: 0.04, 
+                  shadowRadius: 8, 
+                  shadowOffset: { width: 0, height: 3 } 
+                }}
+                onPress={() => navigation.navigate('DetailTugas', { taskId: task.id, event: task })}
+              >
+                {/* Left Thumbnail Section */}
+                <View className={`w-20 ${bgClass} items-center justify-center`}>
+                  <Text className="text-2xl">{emoji}</Text>
+                </View>
+
+                {/* Right Body Section */}
+                <View className="flex-1 p-3.5">
+                  <Text className="mb-2 text-xs font-black text-primary" numberOfLines={2}>{task.name}</Text>
+                  
+                  <InfoRow icon="location-outline" title={location.venue} dense />
+                  <InfoRow icon="calendar-outline" title={formatDate(task.event_date)} dense />
+                  
+                  <View className="flex-row items-center justify-between mt-2 pt-2 border-t border-slate-50">
+                    <View className="flex-row items-center bg-orange-50 px-2 py-0.5 rounded-md">
+                      <Ionicons name="star" size={10} color="#F59E0B" />
+                      <Text className="ml-1 text-[9px] font-black text-crewAccent">
+                        {isDone ? '5.0' : '4.0'}
+                      </Text>
+                    </View>
+                    <StatusBadge 
+                      label={status.label} 
+                      bg={isDone ? 'bg-emerald-50' : 'bg-orange-50'} 
+                      text={isDone ? 'text-emerald-600' : 'text-orange-600'} 
+                    />
                   </View>
                 </View>
-                <View className="flex-row items-center mb-0.5">
-                  <Ionicons name="location-outline" size={12} color="#94A3B8" />
-                  <Text className="text-slate-400 text-xs ml-1" numberOfLines={1}>{item.location}</Text>
-                </View>
-                <View className="flex-row items-center">
-                  <Ionicons name="calendar-outline" size={12} color="#94A3B8" />
-                  <Text className="text-slate-400 text-xs ml-1">{item.date}</Text>
-                </View>
-                <Text className="text-slate-500 text-xs mt-0.5">{item.role}</Text>
-              </View>
-            </View>
-
-            {/* Bottom Rating Row */}
-            {item.rating && (
-              <View className="px-4 py-3 border-t border-slate-50 flex-row justify-between items-center">
-                <Text className="text-slate-400 text-xs">Rating Kinerja</Text>
-                {renderStars(item.rating)}
-              </View>
-            )}
-          </View>
-        ))}
+              </TouchableOpacity>
+            );
+          })
+        )}
       </ScrollView>
     </View>
   );
 };
-
-

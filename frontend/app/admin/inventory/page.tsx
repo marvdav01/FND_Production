@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { fetchAPI } from "@/lib/api"
+import { fetchAPI, getAssetUrl } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,6 +25,7 @@ import {
 import { Plus, Search, Package, Edit, Trash2 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { Equipment } from "@/lib/types"
+import { toast } from "sonner"
 
 const categories = ["Lighting", "Effects", "Display", "Rigging", "Control", "Audio", "Other"]
 
@@ -42,6 +43,7 @@ export default function InventoryPage() {
     total_quantity: "",
     available_quantity: "",
   })
+  const [imageFile, setImageFile] = useState<File | null>(null)
 
   useEffect(() => {
     fetchEquipment()
@@ -85,7 +87,11 @@ export default function InventoryPage() {
       availableStock: parseInt(formData.available_quantity),
     }
 
+    const toastId = toast.loading(editingItem ? "Memperbarui data peralatan..." : "Menyimpan peralatan baru...")
+
     try {
+      let savedEquipmentId: string | number | null = null;
+      
       if (editingItem) {
         const res = await fetchAPI(`/equipment/${editingItem.id}`, {
           method: 'PUT',
@@ -93,8 +99,7 @@ export default function InventoryPage() {
         })
 
         if (res.success) {
-          fetchEquipment()
-          closeDialog()
+          savedEquipmentId = editingItem.id;
         }
       } else {
         const res = await fetchAPI('/equipment', {
@@ -102,27 +107,60 @@ export default function InventoryPage() {
           body: JSON.stringify(payload)
         })
 
-        if (res.success) {
-          fetchEquipment()
-          closeDialog()
+        if (res.success && res.data && res.data.equipmentId) {
+          savedEquipmentId = res.data.equipmentId;
         }
       }
-    } catch (error) {
+      
+      // Upload image if a new one was selected
+      if (savedEquipmentId && imageFile) {
+        toast.loading("Mengunggah gambar peralatan...", { id: toastId })
+        const formData = new FormData()
+        formData.append('image', imageFile)
+        
+        await fetchAPI(`/equipment/${savedEquipmentId}/image`, {
+          method: 'POST',
+          body: formData
+        })
+      }
+      
+      toast.success(editingItem ? "Peralatan berhasil diperbarui!" : "Peralatan berhasil ditambahkan!", { id: toastId })
+      fetchEquipment()
+      closeDialog()
+    } catch (error: any) {
       console.error("Error saving equipment:", error)
+      if (error.data && error.data.details) {
+        console.error("Validation details:", error.data.details)
+        const messages = error.data.details.map((d: any) => `${d.message}`).join(", ")
+        toast.error("Validasi gagal: " + messages, { id: toastId })
+      } else {
+        toast.error(error.message || "Gagal menyimpan peralatan", { id: toastId })
+      }
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Yakin ingin menghapus item ini?")) return
-
-    try {
-      const res = await fetchAPI(`/equipment/${id}`, { method: 'DELETE' })
-      if (res.success) {
-        fetchEquipment()
+    toast("Apakah Anda yakin ingin menghapus peralatan ini?", {
+      action: {
+        label: "Hapus",
+        onClick: async () => {
+          const toastId = toast.loading("Menghapus peralatan...")
+          try {
+            const res = await fetchAPI(`/equipment/${id}`, { method: 'DELETE' })
+            if (res.success) {
+              toast.success("Peralatan berhasil dihapus!", { id: toastId })
+              fetchEquipment()
+            }
+          } catch (error: any) {
+            toast.error(error.message || "Gagal menghapus peralatan", { id: toastId })
+          }
+        }
+      },
+      cancel: {
+        label: "Batal",
+        onClick: () => {}
       }
-    } catch (error) {
-      console.error("Error deleting equipment:", error)
-    }
+    })
   }
 
   function openEditDialog(item: Equipment) {
@@ -147,6 +185,7 @@ export default function InventoryPage() {
       total_quantity: "",
       available_quantity: "",
     })
+    setImageFile(null)
   }
 
   const getAvailabilityColor = (available: number, total: number) => {
@@ -210,6 +249,18 @@ export default function InventoryPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="image">Gambar Item (Opsional)</Label>
+                <Input
+                  id="image"
+                  type="file"
+                  accept="image/jpeg, image/png, image/webp"
+                  onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
+                />
+                {editingItem?.image_url && !imageFile && (
+                  <p className="text-xs text-muted-foreground mt-1">Item ini sudah memiliki gambar.</p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -298,8 +349,12 @@ export default function InventoryPage() {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Package className="h-6 w-6 text-primary" />
+                        <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden border border-border">
+                          {item.image_url ? (
+                            <img src={getAssetUrl(item.image_url) || `http://127.0.0.1:4000${item.image_url}`} alt={item.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <Package className="h-6 w-6 text-primary" />
+                          )}
                         </div>
                         <div>
                           <h3 className="font-medium">{item.name}</h3>

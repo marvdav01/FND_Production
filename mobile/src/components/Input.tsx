@@ -5,21 +5,64 @@ import { Ionicons } from '@expo/vector-icons';
 interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
+  icon?: string;
 }
 
-export const Input = ({ label, error, className, secureTextEntry, ...props }: InputProps) => {
+export const Input = ({ label, error, className, secureTextEntry, icon, ...props }: InputProps) => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   const isPasswordField = secureTextEntry !== undefined;
 
   return (
-    <View className={`mb-4 ${className || ''}`}>
-      {label && <Text className="text-[#1E293B] font-semibold mb-2">{label}</Text>}
-      <View className={`flex-row items-center bg-gray-50 border rounded-xl px-4 ${error ? 'border-[#EF4444]' : 'border-gray-200'}`}>
+    <View style={{ marginBottom: 16 }}>
+      {label && (
+        <Text
+          style={{
+            color: '#CBD5E1',
+            fontWeight: '600',
+            fontSize: 13,
+            marginBottom: 8,
+            marginLeft: 2,
+          }}
+        >
+          {label}
+        </Text>
+      )}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: 'rgba(255,255,255,0.06)',
+          borderWidth: 1,
+          borderColor: error ? '#EF4444' : isFocused ? '#3B82F6' : 'rgba(255,255,255,0.1)',
+          borderRadius: 14,
+          paddingHorizontal: 16,
+          minHeight: 52,
+        }}
+      >
+        {icon && (
+          <Ionicons
+            name={icon as any}
+            size={20}
+            color={error ? '#EF4444' : isFocused ? '#3B82F6' : '#64748B'}
+            style={{ marginRight: 10 }}
+          />
+        )}
         <TextInput
-          className="flex-1 py-3 text-[#0F172A]"
-          placeholderTextColor="#94A3B8"
+          style={{
+            flex: 1,
+            paddingVertical: 14,
+            fontSize: 15,
+            color: '#F1F5F9',
+          }}
+          placeholderTextColor="#475569"
           secureTextEntry={isPasswordField ? !isPasswordVisible : false}
+          onFocus={() => setIsFocused(true)}
+          onBlur={(e) => {
+            setIsFocused(false);
+            props.onBlur?.(e);
+          }}
           {...props}
         />
         {isPasswordField && (
@@ -30,12 +73,16 @@ export const Input = ({ label, error, className, secureTextEntry, ...props }: In
             <Ionicons
               name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
               size={20}
-              color="#94A3B8"
+              color="#475569"
             />
           </TouchableOpacity>
         )}
       </View>
-      {error && <Text className="text-[#EF4444] text-xs mt-1">{error}</Text>}
+      {error && (
+        <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 4, marginLeft: 2 }}>
+          {error}
+        </Text>
+      )}
     </View>
   );
 };

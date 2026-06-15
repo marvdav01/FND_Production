@@ -1,13 +1,29 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { DrawerContentScrollView } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
-import { logout } from '../store/slices/authSlice';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logout } from '../store/slices/authSlice';
 import { RootState } from '../store';
 import { api, getAssetUrl } from '../services/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { initials } from '../utils/fnd';
+
+const menuItems = [
+  { name: 'Beranda', icon: 'home-outline', tab: 'Beranda' },
+  { name: 'Tugas Saya', icon: 'calendar-outline', tab: 'Tugas' },
+  { name: 'Check-In', icon: 'location-outline', tab: 'CheckIn' },
+  { name: 'Dokumentasi', icon: 'images-outline', tab: 'Tugas', params: { screen: 'Dokumentasi' } },
+  { name: 'Riwayat Tugas', icon: 'time-outline', tab: 'Profil', params: { screen: 'RiwayatTugas' } },
+  { name: 'Notifikasi', icon: 'notifications-outline', tab: 'Notifikasi', badge: 3 },
+  { name: 'Profil Saya', icon: 'person-outline', tab: 'Profil' },
+];
+
+const bottomMenuItems = [
+  { name: 'Pengaturan', icon: 'settings-outline' },
+  { name: 'Bantuan', icon: 'help-circle-outline' },
+];
 
 export const CrewDrawerContent = (props: any) => {
   const dispatch = useDispatch();
@@ -15,97 +31,112 @@ export const CrewDrawerContent = (props: any) => {
   const insets = useSafeAreaInsets();
   const avatarUrl = getAssetUrl(user?.avatar_url);
 
+  // Helper to find leaf active screen in navigation state hierarchy
+  const getActiveRoute = (state: any): string => {
+    if (!state) return 'Beranda';
+    const route = state.routes[state.index];
+    if (route.state) return getActiveRoute(route.state);
+    return route.name;
+  };
+
+  const activeScreenName = getActiveRoute(props.state);
+
+  const getIsActive = (item: any) => {
+    if (item.name === 'Beranda' && (activeScreenName === 'DashboardHome' || activeScreenName === 'Beranda')) return true;
+    if (item.name === 'Tugas Saya' && (activeScreenName === 'TugasHome' || activeScreenName === 'DetailTugas')) return true;
+    if (item.name === 'Check-In' && activeScreenName === 'CheckIn') return true;
+    if (item.name === 'Dokumentasi' && activeScreenName === 'Dokumentasi') return true;
+    if (item.name === 'Riwayat Tugas' && activeScreenName === 'RiwayatTugas') return true;
+    if (item.name === 'Notifikasi' && (activeScreenName === 'NotifikasiHome' || activeScreenName === 'Notifikasi')) return true;
+    if (item.name === 'Profil Saya' && (activeScreenName === 'ProfileHome' || activeScreenName === 'Profil')) return true;
+    return false;
+  };
+
+  const navigateToTab = (screen: string, params?: any) => {
+    props.navigation.navigate('CrewTabs', { screen, params });
+    props.navigation.closeDrawer();
+  };
+
   const handleLogout = async () => {
     const refreshToken = await AsyncStorage.getItem('refreshToken');
     await api.post('/auth/logout', { refreshToken }).catch(() => null);
     dispatch(logout());
   };
-  
-  const menuItems = [
-    { name: 'Beranda', icon: 'home-outline', route: 'BerandaTab' },
-    { name: 'Tugas Saya', icon: 'briefcase-outline', route: 'TugasTab' },
-    { name: 'Check-In', icon: 'location-outline', route: 'CheckInTab' },
-    { name: 'Dokumentasi', icon: 'images-outline', route: 'DokumentasiTab' },
-    { name: 'Riwayat Tugas', icon: 'time-outline', route: 'RiwayatTugas' },
-    { name: 'Notifikasi', icon: 'notifications-outline', route: 'NotifikasiTab', badge: 2 },
-    { name: 'Profil Saya', icon: 'person-outline', route: 'ProfilTab' },
-  ];
-
-  const bottomMenuItems = [
-    { name: 'Pengaturan', icon: 'settings-outline' },
-    { name: 'Bantuan', icon: 'help-circle-outline' },
-  ];
 
   return (
-    <View className="flex-1 bg-primary">
+    <View className="flex-1 bg-[#0A1128] relative">
+      {/* Decorative premium radial glows */}
+      <View className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-crewAccent/10 blur-xl" pointerEvents="none" />
+      <View className="absolute bottom-20 -left-10 h-32 w-32 rounded-full bg-blue-500/5 blur-xl" pointerEvents="none" />
+
       <DrawerContentScrollView {...props} contentContainerStyle={{ paddingTop: insets.top }}>
-        {/* Header Drawer */}
-        <View className="px-6 pt-4 pb-8 border-b border-secondary">
-          <View className="flex-row items-center mb-6">
-            <Ionicons name="apps" size={24} color="#FFFFFF" className="mr-2" />
-            <Text className="text-white text-xl font-bold tracking-wider">FND</Text>
-            <Text className="text-white text-xl font-light tracking-wider"> PRODUCTION</Text>
+        <View className="px-6 pb-6 pt-5">
+          {/* Logo and Branding */}
+          <View className="mb-7 flex-row items-center">
+            <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-crewAccent shadow-md shadow-crewAccent/30">
+              <Text className="text-sm font-black text-white">FND</Text>
+            </View>
+            <View>
+              <Text className="text-sm font-black tracking-wider text-white">FND Production</Text>
+              <Text className="text-[8px] font-semibold tracking-widest text-slate-400">EVENT SPECIALIST</Text>
+            </View>
           </View>
-          
+
+          <View className="h-px bg-white/5 mb-6" />
+
+          {/* User Profile Snippet */}
           <View className="flex-row items-center">
             {avatarUrl ? (
-              <Image 
-                source={{ uri: avatarUrl }} 
-                className="w-14 h-14 rounded-full border-2 border-accent"
-              />
+              <Image source={{ uri: avatarUrl }} className="h-11 w-11 rounded-full border-2 border-white/20" />
             ) : (
-              <View className="w-14 h-14 rounded-full border-2 border-accent bg-slate-600 items-center justify-center">
-                <Ionicons name="person" size={24} color="#FFF" />
+              <View className="h-11 w-11 items-center justify-center rounded-full border-2 border-white/20 bg-white/10">
+                <Text className="font-bold text-white text-xs">{initials(user?.name)}</Text>
               </View>
             )}
-            <View className="ml-4">
-              <Text className="text-white text-lg font-bold">{user?.name || 'Crew'}</Text>
-              <Text className="text-slate-400 text-sm uppercase">{user?.role || 'CREW'}</Text>
+            <View className="ml-3 flex-1">
+              <Text className="text-sm font-bold text-white" numberOfLines={1}>{user?.name || 'Crew'}</Text>
+              <Text className="text-[10px] text-slate-400">Sound Engineer</Text>
             </View>
+            <View className="h-2 w-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
           </View>
         </View>
 
-        {/* Main Menu */}
-        <View className="px-4 py-6">
-          {menuItems.map((item, index) => {
-            // Check if active (rough check based on current route name)
-            const isActive = props.state.routes[props.state.index].name === item.route;
-            
+        <View className="h-px bg-white/5" />
+
+        {/* Navigation List */}
+        <View className="px-3 py-4">
+          {menuItems.map((item) => {
+            const active = getIsActive(item);
             return (
-              <TouchableOpacity 
-                key={index} 
-                className={`flex-row items-center px-4 py-3.5 mb-2 rounded-xl ${isActive ? 'bg-secondary' : ''}`}
-                onPress={() => props.navigation.navigate(item.route)}
+              <TouchableOpacity
+                key={item.name}
+                className={`mb-1 flex-row items-center rounded-xl px-4 py-3 ${active ? 'bg-crewAccent shadow-md shadow-crewAccent/25' : ''}`}
+                onPress={() => navigateToTab(item.tab, item.params)}
               >
-                <Ionicons name={item.icon as any} size={22} color={isActive ? '#FFFFFF' : '#94A3B8'} />
-                <Text className={`ml-4 text-base ${isActive ? 'text-white font-semibold' : 'text-slate-400 font-medium'}`}>
-                  {item.name}
-                </Text>
-                {item.badge && (
-                  <View className="absolute right-4 bg-danger rounded-full w-5 h-5 items-center justify-center">
-                    <Text className="text-white text-xs font-bold">{item.badge}</Text>
+                <Ionicons name={item.icon as any} size={20} color={active ? '#FFFFFF' : '#94A3B8'} />
+                <Text className={`ml-4 text-sm font-semibold ${active ? 'text-white' : 'text-slate-300'}`}>{item.name}</Text>
+                {item.badge ? (
+                  <View className="ml-auto h-4 w-6 items-center justify-center rounded-full bg-danger">
+                    <Text className="text-[9px] font-bold text-white">{item.badge}</Text>
                   </View>
-                )}
+                ) : null}
               </TouchableOpacity>
             );
           })}
         </View>
 
-        {/* Bottom Menu */}
-        <View className="px-4 py-4 border-t border-secondary mt-4">
-          {bottomMenuItems.map((item, index) => (
-            <TouchableOpacity key={index} className="flex-row items-center px-4 py-3.5 mb-1">
-              <Ionicons name={item.icon as any} size={22} color="#94A3B8" />
-              <Text className="ml-4 text-base text-slate-400 font-medium">{item.name}</Text>
+        {/* Bottom Section */}
+        <View className="mx-3 mt-2 border-t border-white/5 py-4">
+          {bottomMenuItems.map((item) => (
+            <TouchableOpacity key={item.name} className="mb-1 flex-row items-center rounded-xl px-4 py-3 hover:bg-white/5">
+              <Ionicons name={item.icon as any} size={20} color="#64748B" />
+              <Text className="ml-4 text-sm font-medium text-slate-400">{item.name}</Text>
             </TouchableOpacity>
           ))}
-          
-          <TouchableOpacity 
-            className="flex-row items-center px-4 py-3.5 mt-2"
-            onPress={handleLogout}
-          >
-            <Ionicons name="log-out-outline" size={22} color="#94A3B8" />
-            <Text className="ml-4 text-base text-slate-400 font-medium">Keluar</Text>
+
+          <TouchableOpacity className="mt-2 flex-row items-center rounded-xl px-4 py-3 bg-red-500/10 border border-red-500/15" onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+            <Text className="ml-4 text-sm font-bold text-red-500">Keluar</Text>
           </TouchableOpacity>
         </View>
       </DrawerContentScrollView>

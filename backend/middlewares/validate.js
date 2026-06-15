@@ -13,6 +13,7 @@ export const validate = (schema) => (req, res, next) => {
     next();
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error("Validation failed error:", error.errors);
       return res.status(400).json({
         success: false,
         error: 'Validation failed',

@@ -1,114 +1,241 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
+import { api, getAssetUrl, uploadFormData } from '../../services/api';
+import { EmptyState, FndHeader } from '../../components/FndUi';
+import { eventImages } from '../../utils/fnd';
 
 const TABS = ['Foto', 'Video'];
 
-const FOTO_ITEMS = [
-  { id: 1, uri: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=300&q=80' },
-  { id: 2, uri: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=300&q=80' },
-  { id: 3, uri: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=300&q=80' },
-  { id: 4, uri: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=300&q=80' },
-  { id: 5, uri: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=300&q=80' },
-  { id: 6, uri: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&q=80' },
-];
+function parseImages(value: any): string[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return value.startsWith('http') ? [value] : [];
+    }
+  }
+  return [];
+}
 
-const VIDEO_ITEMS = [
-  { id: 1, uri: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=300&q=80', duration: '2:34' },
-  { id: 2, uri: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=300&q=80', duration: '5:12' },
-];
-
-export const DokumentasiScreen = () => {
+export const DokumentasiScreen = ({ route, navigation }: any) => {
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState('Foto');
+  const [event, setEvent] = useState<any>(route?.params?.event || null);
+  const [loading, setLoading] = useState(!route?.params?.event);
+  const [uploading, setUploading] = useState(false);
 
-  const handleUpload = () => {
-    Alert.alert('Upload Foto/Video', 'Pilih sumber:', [
-      { text: 'Kamera', onPress: () => {} },
-      { text: 'Galeri', onPress: () => {} },
-      { text: 'Batal', style: 'cancel' },
-    ]);
+  useEffect(() => {
+    const loadEvent = async () => {
+      try {
+        if (event?.id) {
+          const detail = await api.get(`/events/${event.id}`);
+          if (detail.data?.success) setEvent({ ...event, ...detail.data.data });
+          return;
+        }
+
+        const response = await api.get('/events/assigned');
+        const assigned = response.data?.data || [];
+        const current = assigned.find((item: any) => !['selesai', 'cancel'].includes(String(item.status).toLowerCase())) || assigned[0];
+        if (current?.id) {
+          const detail = await api.get(`/events/${current.id}`);
+          setEvent(detail.data?.data || current);
+        }
+      } catch {
+        setEvent(route?.params?.event || null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadEvent();
+  }, [event?.id]);
+
+  const photos = useMemo(() => {
+    const docs = parseImages(event?.reference_images).map((url) => getAssetUrl(url) || url);
+    return docs.length ? docs : eventImages.slice(0, 9);
+  }, [event?.reference_images]);
+
+  const uploadPhoto = async () => {
+    if (!event?.id) {
+      Alert.alert('Belum ada event', 'Pilih event tugas terlebih dahulu untuk mengunggah dokumentasi.');
+      return;
+    }
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Izin Ditolak', 'Aplikasi memerlukan akses galeri untuk memilih foto.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.75,
+      selectionLimit: 6,
+    });
+
+    if (result.canceled || !result.assets.length) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+
+      for (let index = 0; index < result.assets.length; index++) {
+        const asset = result.assets[index];
+        let ext = (asset.uri.split('.').pop() || 'jpg').toLowerCase().split('?')[0];
+        // Safe extension fallback check
+        if (ext.length > 5 || !/^[a-z0-9]+$/.test(ext)) {
+          ext = 'jpg';
+        }
+        
+        let mimeType = asset.mimeType || (ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg');
+        // Normalize HEIC/HEIF to jpeg
+        if (mimeType === 'image/heic' || mimeType === 'image/heif') {
+          mimeType = 'image/jpeg';
+        }
+        
+        const fileName = asset.fileName || `documentation-${Date.now()}-${index}.${ext}`;
+
+        if (Platform.OS === 'web') {
+          // Di Expo Web, uri adalah blob:// URL — harus di-fetch dulu jadi File object
+          const fetchResp = await fetch(asset.uri);
+          const blob = await fetchResp.blob();
+          const file = new File([blob], fileName, { type: mimeType });
+          formData.append('images', file);
+        } else {
+          // Di React Native (Android/iOS)
+          formData.append('images', { uri: asset.uri, name: fileName, type: mimeType } as any);
+        }
+      }
+
+      // Gunakan native fetch (bukan axios) agar Content-Type boundary diisi otomatis
+      await uploadFormData(`/events/${event.id}/documentation`, formData);
+
+      const detail = await api.get(`/events/${event.id}`);
+      if (detail.data?.success) setEvent(detail.data.data);
+      Alert.alert('Berhasil! 🎉', `${result.assets.length} foto berhasil diunggah ke dokumentasi event.`);
+    } catch (error: any) {
+      console.error('Upload error detail:', error);
+      const errMsg = error?.message || JSON.stringify(error) || 'Terjadi kesalahan saat upload';
+      Alert.alert('Upload Gagal', errMsg);
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const items = activeTab === 'Foto' ? FOTO_ITEMS : VIDEO_ITEMS;
-
   return (
-    <View className="flex-1 bg-white">
-      {/* Foto / Video Tabs */}
-      <View className="flex-row px-6 py-4 border-b border-slate-100">
-        {TABS.map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            onPress={() => setActiveTab(tab)}
-            className={`mr-6 pb-2 border-b-2 ${activeTab === tab ? 'border-accent' : 'border-transparent'}`}
-          >
-            <Text className={`font-semibold text-base ${activeTab === tab ? 'text-accent' : 'text-slate-400'}`}>
-              {tab}
-            </Text>
+    <View className="flex-1 bg-crewBg">
+      {/* Header bar */}
+      <View style={{ paddingTop: insets.top + 10 }} className="bg-primary px-5 pb-4">
+        <View className="h-11 flex-row items-center justify-between">
+          <TouchableOpacity onPress={() => navigation.goBack()} className="h-9 w-9 items-center justify-center rounded-full bg-white/10">
+            <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
-        ))}
+          <Text className="text-base font-extrabold text-white">Dokumentasi Event</Text>
+          <View className="w-9" />
+        </View>
       </View>
 
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
-      >
-        {/* Label "Foto Terakhir" */}
-        <View className="px-6 pt-4 pb-2">
-          <Text className="text-primary font-bold text-base">
-            {activeTab === 'Foto' ? 'Foto Terakhir' : 'Video Terakhir'}
-          </Text>
-        </View>
-
-        {/* Grid galeri 3 kolom */}
-        <View className="flex-row flex-wrap px-4">
-          {items.map((item) => (
+      {/* Segmented Top Tabs (Orange active highlight) */}
+      <View className="flex-row bg-white border-b border-slate-100">
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab;
+          return (
             <TouchableOpacity
-              key={item.id}
-              className="w-[31%] mx-[1%] mb-2 rounded-xl overflow-hidden"
-              style={{ aspectRatio: 1 }}
+              key={tab}
+              onPress={() => setActiveTab(tab)}
+              className="flex-1 items-center py-3.5 relative"
             >
-              <Image
-                source={{ uri: item.uri }}
-                className="w-full h-full"
-                resizeMode="cover"
-              />
-              {/* Video play icon overlay */}
-              {'duration' in item && (
-                <View className="absolute inset-0 bg-black/30 items-center justify-center">
-                  <View className="bg-white/90 w-8 h-8 rounded-full items-center justify-center">
-                    <Ionicons name="play" size={14} color="#0F172A" />
-                  </View>
-                  <Text className="text-white text-[10px] mt-1 font-bold">{(item as any).duration}</Text>
-                </View>
-              )}
+              <Text className={`text-xs font-bold ${isActive ? 'text-crewAccent' : 'text-slate-400'}`}>
+                {tab}
+              </Text>
+              {isActive ? (
+                <View className="absolute bottom-0 left-[35%] right-[35%] h-[2px] bg-crewAccent rounded-full" />
+              ) : null}
             </TouchableOpacity>
-          ))}
-        </View>
+          );
+        })}
+      </View>
 
-        {/* Upload Section */}
-        <View className="mx-6 mt-4">
-          <Text className="text-primary font-bold text-base mb-3">Upload Foto Baru</Text>
-          <TouchableOpacity
-            onPress={handleUpload}
-            className="border-2 border-dashed border-slate-200 rounded-2xl py-8 items-center justify-center bg-slate-50"
-          >
-            <View className="bg-slate-200 w-12 h-12 rounded-full items-center justify-center mb-3">
-              <Ionicons name="add" size={28} color="#64748B" />
+      {/* Mini Search Bar & Filter Buttons */}
+      <View className="flex-row items-center gap-2 px-4 py-3 bg-white border-b border-slate-100">
+        <View className="flex-1 flex-row items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+          <Ionicons name="search-outline" size={14} color="#94A3B8" />
+          <Text className="ml-2 text-slate-400 text-xs font-medium">Search documentation...</Text>
+        </View>
+        <TouchableOpacity className="h-9 w-9 items-center justify-center rounded-xl bg-slate-50 border border-slate-200">
+          <Ionicons name="funnel-outline" size={15} color="#475569" />
+        </TouchableOpacity>
+        <TouchableOpacity className="h-9 w-9 items-center justify-center rounded-xl bg-slate-50 border border-slate-200">
+          <Ionicons name="grid-outline" size={15} color="#475569" />
+        </TouchableOpacity>
+      </View>
+
+      {loading ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#F97316" />
+        </View>
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 110 }}>
+          <View className="flex-row items-center justify-between mb-3.5">
+            <Text className="text-xs font-black text-primary">
+              {activeTab === 'Foto' ? 'Foto Terakhir' : 'Video Terakhir'}
+            </Text>
+            <Text className="text-[10px] font-extrabold text-crewAccent">Grid view</Text>
+          </View>
+
+          {activeTab === 'Video' ? (
+            <EmptyState icon="videocam-outline" title="Belum ada video" description="Backend saat ini menerima dokumentasi foto. Video dapat ditambahkan setelah endpoint media video tersedia." />
+          ) : (
+            <View className="flex-row flex-wrap justify-start gap-2.5">
+              {photos.map((uri, index) => (
+                <TouchableOpacity 
+                  key={`${uri}-${index}`} 
+                  className="mb-1 overflow-hidden rounded-xl bg-slate-100 border border-slate-100" 
+                  style={{ width: '30.8%', aspectRatio: 1 }}
+                >
+                  <Image source={{ uri }} className="h-full w-full" resizeMode="cover" />
+                </TouchableOpacity>
+              ))}
             </View>
-            <Text className="text-slate-600 font-semibold">Pilih Foto</Text>
-            <Text className="text-slate-400 text-xs mt-1">Maks. 5MB / file, .jpg .png</Text>
-          </TouchableOpacity>
-        </View>
+          )}
 
-        {/* Info text */}
-        <View className="mx-6 mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
-          <Text className="text-blue-700 text-xs leading-5 text-center">
-            📸 Dokumentasi akan membantu laporan pekerjaan dan evaluasi kualitas event.
-          </Text>
-        </View>
-      </ScrollView>
+          <Text className="mb-3.5 mt-6 text-xs font-black text-primary">Upload Dokumentasi</Text>
+          
+          {/* Dashed orange border upload button card */}
+          <TouchableOpacity
+            onPress={uploadPhoto}
+            disabled={uploading || activeTab !== 'Foto'}
+            className="flex-col items-center justify-center rounded-2xl bg-orange-50/20 py-7 px-4"
+            style={{
+              borderStyle: 'dashed',
+              borderWidth: 1.5,
+              borderColor: '#F97316',
+            }}
+          >
+            {uploading ? (
+              <ActivityIndicator color="#F97316" size="small" />
+            ) : (
+              <Ionicons name="cloud-upload-outline" size={28} color="#F97316" />
+            )}
+            <Text className="mt-2.5 text-xs font-extrabold text-crewAccent">
+              {uploading ? 'Mengunggah...' : 'Tambah Foto Baru'}
+            </Text>
+            <Text className="mt-1 text-[9px] text-slate-400">Maks. 8MB / foto</Text>
+          </TouchableOpacity>
+
+          <View className="mt-5 flex-row rounded-2xl border border-blue-50 bg-blue-50/40 p-4">
+            <Ionicons name="information-circle-outline" size={18} color="#3B82F6" style={{ marginTop: 1 }} />
+            <Text className="ml-3 flex-1 text-[10px] leading-4 text-slate-500">
+              Foto dokumentasi yang Anda unggah akan disimpan ke server dan disinkronisasikan ke dasbor admin FND Production.
+            </Text>
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 };
-

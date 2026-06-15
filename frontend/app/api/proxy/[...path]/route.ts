@@ -105,9 +105,22 @@ function filteredResponseHeaders(headers: Headers) {
 
 function backendHeaders(request: NextRequest, accessToken?: string | null) {
   const headers = new Headers(request.headers)
-  headers.delete("host")
-  headers.delete("cookie")
-  headers.delete("content-length")
+  for (const name of [
+    "host",
+    "cookie",
+    "content-length",
+    "connection",
+    "expect",
+    "keep-alive",
+    "proxy-authenticate",
+    "proxy-authorization",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+  ]) {
+    headers.delete(name)
+  }
 
   if (accessToken && !headers.has("authorization")) {
     headers.set("authorization", `Bearer ${accessToken}`)
@@ -183,23 +196,42 @@ async function handleProxy(request: NextRequest, context: ProxyContext) {
     try {
       const json = JSON.parse(new TextDecoder().decode(responseBody as ArrayBuffer)) as AuthResponse
       if (path === "auth/login" || path === "auth/refresh") {
-        setAuthCookies(response, json)
+        const sanitized = new NextResponse(responseBody, {
+          status: backendResponse.status,
+          headers: responseHeaders,
+        })
+        setAuthCookies(sanitized, json)
+        
         if (json?.data) {
           delete json.data.token
           delete json.data.accessToken
           delete json.data.refreshToken
         }
-        responseBody = JSON.stringify(json)
-        responseHeaders.set("content-type", "application/json")
-        const sanitized = new NextResponse(responseBody, {
-          status: backendResponse.status,
-          headers: responseHeaders,
+        
+        const stringifiedJson = JSON.stringify(json)
+        const finalResponse = new NextResponse(stringifiedJson, {
+          status: sanitized.status,
+          headers: sanitized.headers,
         })
-        for (const cookie of response.cookies.getAll()) {
-          const { name, value, ...options } = cookie
-          sanitized.cookies.set(name, value, options)
+        finalResponse.headers.set("content-type", "application/json")
+        for (const [key, value] of sanitized.headers.entries()) {
+           if (key.toLowerCase() === 'set-cookie') {
+              finalResponse.headers.append('set-cookie', value)
+           }
         }
-        response = sanitized
+        // Workaround for Next.js cookies API
+        for (const cookie of sanitized.cookies.getAll()) {
+           finalResponse.cookies.set(cookie.name, cookie.value, {
+             httpOnly: cookie.httpOnly,
+             secure: cookie.secure,
+             sameSite: cookie.sameSite as "lax" | "strict" | "none",
+             path: cookie.path,
+             maxAge: cookie.maxAge,
+             expires: cookie.expires
+           })
+        }
+        
+        response = finalResponse
       }
       if (path === "auth/logout") {
         clearAuthCookies(response)

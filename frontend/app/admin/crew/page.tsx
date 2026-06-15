@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Plus, Search, Users, User, Phone, Mail, Lock, Edit, Trash2, UserPlus } from "lucide-react"
+import { toast } from "sonner"
 import type { Profile, CrewAvailability } from "@/lib/types"
 
 const positions = [
@@ -32,6 +33,8 @@ const positions = [
   "Rigger",
   "DMX Programmer",
   "Production Manager",
+  "Technician",
+  "Operator",
 ]
 
 export default function CrewPage() {
@@ -98,6 +101,7 @@ export default function CrewPage() {
     e.preventDefault()
 
     if (editingItem) {
+      const toastId = toast.loading("Memperbarui data crew...")
       try {
         const payload = {
           name: formData.full_name,
@@ -112,11 +116,13 @@ export default function CrewPage() {
         })
 
         if (res.success) {
+          toast.success("Data crew berhasil diperbarui!", { id: toastId })
           fetchCrew()
           closeEditDialog()
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error updating crew:", error)
+        toast.error(error.message || "Gagal memperbarui data crew", { id: toastId })
       }
     }
   }
@@ -125,6 +131,7 @@ export default function CrewPage() {
     e.preventDefault()
     setAddLoading(true)
     setAddError("")
+    const toastId = toast.loading("Mendaftarkan crew baru...")
 
     try {
       const res = await fetchAPI('/crew/register', {
@@ -133,12 +140,15 @@ export default function CrewPage() {
       })
 
       if (res.success) {
+        toast.success("Crew baru berhasil didaftarkan!", { id: toastId })
         fetchCrew()
         closeAddDialog()
       } else {
+        toast.error(res.error || "Gagal menambah crew", { id: toastId })
         setAddError(res.error || "Gagal menambah crew")
       }
     } catch (error: any) {
+      toast.error(error.message || "Gagal menambah crew", { id: toastId })
       setAddError(error.message || "Gagal menambah crew")
     } finally {
       setAddLoading(false)
@@ -146,16 +156,27 @@ export default function CrewPage() {
   }
 
   async function handleDeleteCrew(id: string) {
-    if (!confirm("Apakah Anda yakin ingin menghapus crew ini?")) return
-
-    try {
-      const res = await fetchAPI(`/crew/${id}`, { method: 'DELETE' })
-      if (res.success) {
-        fetchCrew()
+    toast("Apakah Anda yakin ingin menghapus crew ini?", {
+      action: {
+        label: "Hapus",
+        onClick: async () => {
+          const toastId = toast.loading("Menghapus data crew...")
+          try {
+            const res = await fetchAPI(`/crew/${id}`, { method: 'DELETE' })
+            if (res.success) {
+              toast.success("Crew berhasil dihapus!", { id: toastId })
+              fetchCrew()
+            }
+          } catch (error: any) {
+            toast.error(error.message || "Gagal menghapus crew", { id: toastId })
+          }
+        }
+      },
+      cancel: {
+        label: "Batal",
+        onClick: () => {}
       }
-    } catch (error) {
-      console.error("Error deleting crew:", error)
-    }
+    })
   }
 
   async function updateAvailability(id: string, availability: CrewAvailability) {
